@@ -4,6 +4,12 @@ from typing import List, Tuple
 import flopy
 import numpy as np
 
+from hmse_simulations.hmse_projects.hmse_hydrological_models.modflow.modflow_metadata import ModflowMetadata
+
+
+def extract_metadata(modflow_archive) -> ModflowMetadata:
+    pass
+
 
 def validate_model(model_path: str) -> bool:
     """
