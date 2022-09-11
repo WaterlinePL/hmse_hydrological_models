@@ -1,17 +1,50 @@
+import os
+import tempfile
 from collections import deque
-from typing import List, Tuple
+from typing import List, Tuple, Optional
+from zipfile import ZipFile
 
 import flopy
 import numpy as np
 
+from hmse_simulations.hmse_projects.hmse_hydrological_models.model_exceptions import ModflowMissingFileError, \
+    ModflowCommonError
 from hmse_simulations.hmse_projects.hmse_hydrological_models.modflow.modflow_metadata import ModflowMetadata
 
 
-def extract_metadata(modflow_archive) -> ModflowMetadata:
-    pass
+def adapt_model_to_display(metadata: ModflowMetadata):
+    row_cells, col_cells = scale_cells_size(metadata.row_cells, metadata.col_cells)
+    return ModflowMetadata(modflow_id=metadata.modflow_id,
+                           rows=metadata.rows, cols=metadata.cols,
+                           row_cells=row_cells, col_cells=col_cells,
+                           grid_unit=metadata.grid_unit)
 
 
-def validate_model(model_path: str) -> bool:
+def extract_metadata(modflow_archive) -> Tuple[ModflowMetadata, List[np.ndarray]]:
+    extension = modflow_archive.filename.split('.')[-1]
+    modflow_id = modflow_archive.filename.replace(f".{extension}", "")
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        modflow_path = os.path.join(tmp_dir, modflow_archive.filename)
+        modflow_archive.save(modflow_path)
+        with ZipFile(modflow_path, 'r') as archive:
+            archive.extractall(tmp_dir)
+            __validate_model(tmp_dir)
+
+            model = flopy.modflow.Modflow.load(__scan_for_nam_file(tmp_dir),
+                                               model_ws=tmp_dir,
+                                               load_only=["rch", "dis"],
+                                               forgive=True)
+
+            model_shape = (model.nrow, model.ncol)
+            model_metadata = ModflowMetadata(modflow_id,
+                                             rows=model_shape[0], cols=model_shape[1],
+                                             row_cells=model.dis.delc.array.tolist(),
+                                             col_cells=model.dis.delr.array.tolist(),
+                                             grid_unit=model.modelgrid.units)
+            return model_metadata, get_shapes_from_rch(model_path=tmp_dir, model_shape=model_shape)
+
+
+def __validate_model(model_path: str) -> None:
     """
     Validates modflow model - check if it contains .nam file (list of files), .rch file (recharge),
     perform recharge check.
@@ -22,7 +55,7 @@ def validate_model(model_path: str) -> bool:
 
     nam_file_name = __scan_for_nam_file(model_path)
     if not nam_file_name:
-        return False
+        raise ModflowMissingFileError(description="Invalid Modflow model - .nam file not found!")
 
     try:
         # load whole model and validate it
@@ -31,22 +64,17 @@ def validate_model(model_path: str) -> bool:
                                        forgive=True,
                                        check=True)
         if m.rch is None:
-            print("Model doesn't contain .rch file")
-            return False
+            raise ModflowMissingFileError(description="Invalid Modflow model - .rch file not found!")
         m.rch.check()
     except IOError:
-        print("Model is not valid - files are missing")
-        return False
+        raise ModflowMissingFileError(description="Invalid Modflow model - validation detected missing files!")
     except KeyError:
-        print("Model is not valid - modflow common error")
-        return False
-
-    return True
+        raise ModflowCommonError(description="Invalid Modflow model - validation detected an unspecified error!")
 
 
 def scale_cells_size(row_cells: List[float],
                      col_cells: List[float],
-                     max_width: float) -> Tuple[List[float], List[float]]:
+                     max_width: float = 500) -> Tuple[List[float], List[float]]:
     """
     Get cells size of modflow model
     @param col_cells: list of modflow model cols width
@@ -70,12 +98,12 @@ def scale_cells_size(row_cells: List[float],
     return row_cells, col_cells
 
 
-def get_shapes_from_rch(model_path: str, project_shape: Tuple[int, int]) -> List[np.ndarray]:
+def get_shapes_from_rch(model_path: str, model_shape: Tuple[int, int]) -> List[np.ndarray]:
     """
     Defines shapes masks for uploaded Modflow model based on recharge
 
     @param model_path: Path of Modflow model
-    @param project_shape: Tuple representing size of the Modflow project (rows, cols)
+    @param model_shape: Tuple representing size of the Modflow project (rows, cols)
     @return: List of shapes read from Modflow project
     """
 
@@ -90,17 +118,17 @@ def get_shapes_from_rch(model_path: str, project_shape: Tuple[int, int]) -> List
     layer = 0
 
     recharge_masks = []
-    is_checked_array = np.full(project_shape, False)
+    is_checked_array = np.full(model_shape, False)
     recharge_array = modflow_model.rch.rech.array[stress_period][layer]
-    modflow_rows, modflow_cols = project_shape
+    modflow_rows, modflow_cols = model_shape
 
     for row in range(modflow_rows):
         for col in range(modflow_cols):
             if not is_checked_array[row][col]:
-                recharge_masks.append(np.zeros(project_shape))
+                recharge_masks.append(np.zeros(model_shape))
                 __fill_mask_iterative(mask=recharge_masks[-1], recharge_array=recharge_array,
                                       is_checked_array=is_checked_array,
-                                      project_shape=project_shape,
+                                      project_shape=model_shape,
                                       row=row, col=col,
                                       value=recharge_array[row][col])
 
@@ -147,6 +175,8 @@ def __fill_mask_iterative(mask: np.ndarray,
             stack.append((cur_row, cur_col + 1))
 
 
-def __scan_for_nam_file(model_path: str) -> str:
-    # TODO: find .nam file given model path
-    pass
+def __scan_for_nam_file(model_path: str) -> Optional[str]:
+    for file in os.listdir(model_path):
+        if file.endswith(".nam"):
+            return file
+    return None
