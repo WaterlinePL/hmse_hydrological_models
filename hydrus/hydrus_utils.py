@@ -1,7 +1,7 @@
 import logging
 import os
 import tempfile
-from typing import List
+from typing import List, Union
 from zipfile import ZipFile
 
 from hmse_simulations.hmse_projects.hmse_hydrological_models.model_exceptions import HydrusMissingFileError
@@ -9,21 +9,20 @@ from hmse_simulations.hmse_projects.hmse_hydrological_models.model_exceptions im
 EXPECTED_INPUT_FILES = ["SELECTOR.IN", "ATMOSPH.IN"]
 
 
-def get_hydrus_input_files(model_path: str) -> List[str]:
+def get_hydrus_input_files(model_path: Union[os.PathLike, str]) -> List[str]:
     return [file.casefold() for file in os.listdir(model_path) if file.lower().endswith(".in")]
 
 
-def validate_model(hydrus_archive):
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        hydrus_path = os.path.join(tmp_dir, hydrus_archive.filename)
-        hydrus_archive.save(hydrus_path)
-        with ZipFile(hydrus_path, 'r') as archive:
-            archive.extractall(tmp_dir)
-            input_files = get_hydrus_input_files(hydrus_path)
-            for expected_file in EXPECTED_INPUT_FILES:
-                if expected_file.casefold() not in input_files:
-                    raise HydrusMissingFileError(description=f"Invalid Hydrus model - validation detected "
-                                                             f"missing file: {expected_file}")
+def validate_model(hydrus_archive, validation_dir: os.PathLike):
+    hydrus_path = os.path.join(validation_dir, hydrus_archive.filename)
+    hydrus_archive.save(hydrus_path)
+    with ZipFile(hydrus_path, 'r') as archive:
+        archive.extractall(validation_dir)
+        input_files = get_hydrus_input_files(validation_dir)
+        for expected_file in EXPECTED_INPUT_FILES:
+            if expected_file.casefold() not in input_files:
+                raise HydrusMissingFileError(description=f"Invalid Hydrus model - validation detected "
+                                                         f"missing file: {expected_file}")
 
 
 def get_hydrus_length_unit(model_path: str):

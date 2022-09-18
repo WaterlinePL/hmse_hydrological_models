@@ -20,31 +20,31 @@ def adapt_model_to_display(metadata: ModflowMetadata):
                            grid_unit=metadata.grid_unit)
 
 
-def extract_metadata(modflow_archive) -> Tuple[ModflowMetadata, List[np.ndarray]]:
+def extract_metadata(modflow_archive, tmp_dir: os.PathLike) -> Tuple[ModflowMetadata, List[np.ndarray]]:
     extension = modflow_archive.filename.split('.')[-1]
     modflow_id = modflow_archive.filename.replace(f".{extension}", "")
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        modflow_path = os.path.join(tmp_dir, modflow_archive.filename)
-        modflow_archive.save(modflow_path)
-        with ZipFile(modflow_path, 'r') as archive:
-            archive.extractall(tmp_dir)
-            __validate_model(tmp_dir)
 
-            model = flopy.modflow.Modflow.load(__scan_for_nam_file(tmp_dir),
-                                               model_ws=tmp_dir,
-                                               load_only=["rch", "dis"],
-                                               forgive=True)
+    modflow_path = os.path.join(tmp_dir, modflow_archive.filename)
+    modflow_archive.save(modflow_path)
+    with ZipFile(modflow_path, 'r') as archive:
+        archive.extractall(tmp_dir)
+        __validate_model(tmp_dir)
 
-            model_shape = (model.nrow, model.ncol)
-            model_metadata = ModflowMetadata(modflow_id,
-                                             rows=model_shape[0], cols=model_shape[1],
-                                             row_cells=model.dis.delc.array.tolist(),
-                                             col_cells=model.dis.delr.array.tolist(),
-                                             grid_unit=model.modelgrid.units)
-            return model_metadata, get_shapes_from_rch(model_path=tmp_dir, model_shape=model_shape)
+        model = flopy.modflow.Modflow.load(scan_for_modflow_file(tmp_dir),
+                                           model_ws=tmp_dir,
+                                           load_only=["rch", "dis"],
+                                           forgive=True)
+
+        model_shape = (model.nrow, model.ncol)
+        model_metadata = ModflowMetadata(modflow_id,
+                                         rows=model_shape[0], cols=model_shape[1],
+                                         row_cells=model.dis.delc.array.tolist(),
+                                         col_cells=model.dis.delr.array.tolist(),
+                                         grid_unit=model.modelgrid.units)
+        return model_metadata, get_shapes_from_rch(model_path=tmp_dir, model_shape=model_shape)
 
 
-def __validate_model(model_path: str) -> None:
+def __validate_model(model_path: os.PathLike) -> None:
     """
     Validates modflow model - check if it contains .nam file (list of files), .rch file (recharge),
     perform recharge check.
@@ -53,7 +53,7 @@ def __validate_model(model_path: str) -> None:
     @return: True if model is valid, False otherwise
     """
 
-    nam_file_name = __scan_for_nam_file(model_path)
+    nam_file_name = scan_for_modflow_file(model_path)
     if not nam_file_name:
         raise ModflowMissingFileError(description="Invalid Modflow model - .nam file not found!")
 
@@ -98,7 +98,7 @@ def scale_cells_size(row_cells: List[float],
     return row_cells, col_cells
 
 
-def get_shapes_from_rch(model_path: str, model_shape: Tuple[int, int]) -> List[np.ndarray]:
+def get_shapes_from_rch(model_path: os.PathLike, model_shape: Tuple[int, int]) -> List[np.ndarray]:
     """
     Defines shapes masks for uploaded Modflow model based on recharge
 
@@ -107,7 +107,7 @@ def get_shapes_from_rch(model_path: str, model_shape: Tuple[int, int]) -> List[n
     @return: List of shapes read from Modflow project
     """
 
-    nam_file_name = __scan_for_nam_file(model_path)
+    nam_file_name = scan_for_modflow_file(model_path)
     modflow_model = flopy.modflow.Modflow.load(nam_file_name,
                                                model_ws=model_path,
                                                load_only=["rch"],
@@ -175,8 +175,8 @@ def __fill_mask_iterative(mask: np.ndarray,
             stack.append((cur_row, cur_col + 1))
 
 
-def __scan_for_nam_file(model_path: str) -> Optional[str]:
+def scan_for_modflow_file(model_path: os.PathLike, ext: str = ".nam") -> Optional[str]:
     for file in os.listdir(model_path):
-        if file.endswith(".nam"):
+        if file.endswith(ext):
             return file
     return None
