@@ -15,6 +15,9 @@ from hmse_simulations.hmse_projects.hmse_hydrological_models.modflow.modflow_met
 
 
 def adapt_model_to_display(metadata: ModflowMetadata):
+    if not metadata:
+        return 0, 0, None
+
     row_cells, col_cells, total_width, total_height = scale_cells_size(metadata.row_cells, metadata.col_cells)
     return total_width, total_height, ModflowMetadata(row_cells=row_cells, col_cells=col_cells,
                                                       modflow_id=metadata.modflow_id,
