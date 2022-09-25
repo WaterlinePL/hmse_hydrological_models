@@ -9,18 +9,21 @@ import numpy as np
 
 from hmse_simulations.hmse_projects.hmse_hydrological_models.model_exceptions import ModflowMissingFileError, \
     ModflowCommonError
+from hmse_simulations.hmse_projects.hmse_hydrological_models.modflow import modflow_extra_data
+from hmse_simulations.hmse_projects.hmse_hydrological_models.modflow.modflow_extra_data import ModflowExtraData
 from hmse_simulations.hmse_projects.hmse_hydrological_models.modflow.modflow_metadata import ModflowMetadata
 
 
 def adapt_model_to_display(metadata: ModflowMetadata):
-    row_cells, col_cells = scale_cells_size(metadata.row_cells, metadata.col_cells)
-    return ModflowMetadata(modflow_id=metadata.modflow_id,
-                           rows=metadata.rows, cols=metadata.cols,
-                           row_cells=row_cells, col_cells=col_cells,
-                           grid_unit=metadata.grid_unit)
+    row_cells, col_cells, total_width, total_height = scale_cells_size(metadata.row_cells, metadata.col_cells)
+    return total_width, total_height, ModflowMetadata(row_cells=row_cells, col_cells=col_cells,
+                                                      modflow_id=metadata.modflow_id,
+                                                      rows=metadata.rows, cols=metadata.cols,
+                                                      grid_unit=metadata.grid_unit,
+                                                      duration=metadata.duration)
 
 
-def extract_metadata(modflow_archive, tmp_dir: os.PathLike) -> Tuple[ModflowMetadata, List[np.ndarray]]:
+def extract_metadata(modflow_archive, tmp_dir: os.PathLike) -> Tuple[ModflowMetadata, ModflowExtraData]:
     extension = modflow_archive.filename.split('.')[-1]
     modflow_id = modflow_archive.filename.replace(f".{extension}", "")
 
@@ -40,8 +43,13 @@ def extract_metadata(modflow_archive, tmp_dir: os.PathLike) -> Tuple[ModflowMeta
                                          rows=model_shape[0], cols=model_shape[1],
                                          row_cells=model.dis.delc.array.tolist(),
                                          col_cells=model.dis.delr.array.tolist(),
-                                         grid_unit=model.modelgrid.units)
-        return model_metadata, get_shapes_from_rch(model_path=tmp_dir, model_shape=model_shape)
+                                         grid_unit=model.modelgrid.units,
+                                         duration=int(np.sum(model.modeltime.perlen[~model.modeltime.steady_state])))
+        extra_data = ModflowExtraData(
+            **modflow_extra_data.extract_extra_from_model(model),
+            rch_shapes=get_shapes_from_rch(model_path=tmp_dir, model_shape=model_shape)
+        )
+        return model_metadata, extra_data
 
 
 def __validate_model(model_path: os.PathLike) -> None:
@@ -74,25 +82,24 @@ def __validate_model(model_path: os.PathLike) -> None:
 
 def scale_cells_size(row_cells: List[float],
                      col_cells: List[float],
-                     max_width: float = 100) -> Tuple[List[float], List[float]]:
+                     max_width: float = 100) -> Tuple[List[float], List[float], int, int]:
     """
     Get cells size of modflow model
     @param col_cells: list of modflow model cols width
     @param row_cells: list of modflow model rows height
     @param max_width: Parameter for scaling purposes
     @return: Tuple with lists containing width of the Modflow project cells (row_cells, col_cells)
+            and model total width and height
     """
-    print(row_cells)
-    print(col_cells)
     row_cells = np.array(row_cells, dtype="float64")
     col_cells = np.array(col_cells, dtype="float64")
 
-    sum_width = np.sum(col_cells)
-    sum_height = np.sum(row_cells)
+    total_width = np.sum(col_cells)
+    total_height = np.sum(row_cells)
 
-    row_cells /= 0.03 * sum_height
-    col_cells /= 0.02 * sum_width
-    return list(row_cells), list(col_cells)
+    row_cells /= 0.03 * total_height
+    col_cells /= 0.02 * total_width
+    return list(row_cells), list(col_cells), int(total_width), int(total_height)
 
 
 def get_shapes_from_rch(model_path: os.PathLike, model_shape: Tuple[int, int]) -> List[np.ndarray]:
