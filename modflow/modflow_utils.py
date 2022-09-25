@@ -74,7 +74,7 @@ def __validate_model(model_path: os.PathLike) -> None:
 
 def scale_cells_size(row_cells: List[float],
                      col_cells: List[float],
-                     max_width: float = 500) -> Tuple[List[float], List[float]]:
+                     max_width: float = 100) -> Tuple[List[float], List[float]]:
     """
     Get cells size of modflow model
     @param col_cells: list of modflow model cols width
@@ -82,20 +82,17 @@ def scale_cells_size(row_cells: List[float],
     @param max_width: Parameter for scaling purposes
     @return: Tuple with lists containing width of the Modflow project cells (row_cells, col_cells)
     """
+    print(row_cells)
+    print(col_cells)
+    row_cells = np.array(row_cells, dtype="float64")
+    col_cells = np.array(col_cells, dtype="float64")
 
-    sum_width = sum(col_cells)
-    sum_height = sum(row_cells)
+    sum_width = np.sum(col_cells)
+    sum_height = np.sum(row_cells)
 
-    width = max_width
-    height = max_width * (sum_height / sum_width)
-
-    scale_x = sum_width / width
-    scale_y = sum_height / height
-
-    row_cells /= scale_x
-    col_cells /= scale_y
-
-    return row_cells, col_cells
+    row_cells /= 0.03 * sum_height
+    col_cells /= 0.02 * sum_width
+    return list(row_cells), list(col_cells)
 
 
 def get_shapes_from_rch(model_path: os.PathLike, model_shape: Tuple[int, int]) -> List[np.ndarray]:
