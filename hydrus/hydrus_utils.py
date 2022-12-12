@@ -1,10 +1,9 @@
 import logging
 import os
-import tempfile
 from typing import List, Union
 from zipfile import ZipFile
 
-from hmse_simulations.hmse_projects.hmse_hydrological_models.model_exceptions import HydrusMissingFileError
+from ..model_exceptions import HydrusMissingFileError
 
 EXPECTED_INPUT_FILES = ["SELECTOR.IN", "ATMOSPH.IN"]
 

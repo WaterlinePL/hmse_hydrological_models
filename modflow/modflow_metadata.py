@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List
 
-from hmse_simulations.hmse_projects.hmse_hydrological_models.typing_help import ModflowID
+from ..typing_help import ModflowID
 
 
 @dataclass

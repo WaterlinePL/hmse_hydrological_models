@@ -1,4 +1,4 @@
-from hmse_hydrological_models import model_config
+import model_config
 
 
 def type_allowed(filename: str) -> bool:

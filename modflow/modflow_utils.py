@@ -1,5 +1,4 @@
 import os
-import tempfile
 from collections import deque
 from typing import List, Tuple, Optional
 from zipfile import ZipFile
@@ -7,11 +6,11 @@ from zipfile import ZipFile
 import flopy
 import numpy as np
 
-from hmse_simulations.hmse_projects.hmse_hydrological_models.model_exceptions import ModflowMissingFileError, \
+import modflow_extra_data
+from modflow_extra_data import ModflowExtraData
+from modflow_metadata import ModflowMetadata
+from ..model_exceptions import ModflowMissingFileError, \
     ModflowCommonError
-from hmse_simulations.hmse_projects.hmse_hydrological_models.modflow import modflow_extra_data
-from hmse_simulations.hmse_projects.hmse_hydrological_models.modflow.modflow_extra_data import ModflowExtraData
-from hmse_simulations.hmse_projects.hmse_hydrological_models.modflow.modflow_metadata import ModflowMetadata
 
 
 def adapt_model_to_display(metadata: ModflowMetadata):
@@ -182,7 +181,7 @@ def __fill_mask_iterative(mask: np.ndarray,
             stack.append((cur_row, cur_col + 1))
 
 
-def scan_for_modflow_file(model_path: os.PathLike, ext: str = ".nam") -> Optional[str]:
+def Hscan_for_modflow_file(model_path: os.PathLike, ext: str = ".nam") -> Optional[str]:
     for file in os.listdir(model_path):
         if file.endswith(ext):
             return file
