@@ -181,7 +181,7 @@ def __fill_mask_iterative(mask: np.ndarray,
             stack.append((cur_row, cur_col + 1))
 
 
-def Hscan_for_modflow_file(model_path: os.PathLike, ext: str = ".nam") -> Optional[str]:
+def scan_for_modflow_file(model_path: os.PathLike, ext: str = ".nam") -> Optional[str]:
     for file in os.listdir(model_path):
         if file.endswith(ext):
             return file
