@@ -1,4 +1,4 @@
-import model_config
+from . import model_config
 
 
 def type_allowed(filename: str) -> bool:

@@ -6,11 +6,10 @@ from zipfile import ZipFile
 import flopy
 import numpy as np
 
-import modflow_extra_data
-from modflow_extra_data import ModflowExtraData
-from modflow_metadata import ModflowMetadata
-from ..model_exceptions import ModflowMissingFileError, \
-    ModflowCommonError
+from ..model_exceptions import ModflowMissingFileError, ModflowCommonError
+from . import modflow_extra_data
+from .modflow_extra_data import ModflowExtraData
+from .modflow_metadata import ModflowMetadata
 
 
 def adapt_model_to_display(metadata: ModflowMetadata):
