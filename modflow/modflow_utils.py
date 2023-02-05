@@ -1,3 +1,4 @@
+import copy
 import os
 from collections import deque
 from typing import List, Tuple, Optional
@@ -6,6 +7,7 @@ from zipfile import ZipFile
 import flopy
 import numpy as np
 
+from .modflow_step import ModflowStep, ModflowStepType
 from ..model_exceptions import ModflowMissingFileError, ModflowCommonError
 from . import modflow_extra_data
 from .modflow_extra_data import ModflowExtraData
@@ -21,7 +23,7 @@ def adapt_model_to_display(metadata: ModflowMetadata):
                                                       modflow_id=metadata.modflow_id,
                                                       rows=metadata.rows, cols=metadata.cols,
                                                       grid_unit=metadata.grid_unit,
-                                                      duration=metadata.duration)
+                                                      steps_info=copy.deepcopy(metadata.steps_info))
 
 
 def extract_metadata(modflow_archive, tmp_dir: os.PathLike) -> Tuple[ModflowMetadata, ModflowExtraData]:
@@ -40,12 +42,14 @@ def extract_metadata(modflow_archive, tmp_dir: os.PathLike) -> Tuple[ModflowMeta
                                            forgive=True)
 
         model_shape = (model.nrow, model.ncol)
+        model_steps = [ModflowStep(duration=int(duration), type=ModflowStepType.from_bool(is_steady_state))
+                       for is_steady_state, duration in zip(model.modeltime.steady_state, model.modeltime.perlen)]
         model_metadata = ModflowMetadata(modflow_id,
                                          rows=model_shape[0], cols=model_shape[1],
                                          row_cells=model.dis.delc.array.tolist(),
                                          col_cells=model.dis.delr.array.tolist(),
                                          grid_unit=model.modelgrid.units,
-                                         duration=int(np.sum(model.modeltime.perlen[~model.modeltime.steady_state])))
+                                         steps_info=model_steps)
         extra_data = ModflowExtraData(
             **modflow_extra_data.extract_extra_from_model(model),
             rch_shapes=get_shapes_from_rch(model_path=tmp_dir, model_shape=model_shape)
