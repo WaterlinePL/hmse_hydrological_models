@@ -16,6 +16,17 @@ class ModflowMetadata:
     row_cells: List[float] = field(default_factory=list)
     col_cells: List[float] = field(default_factory=list)
 
+    def __post_init__(self):
+        new_step_info = []
+        should_swap = False
+        for step in self.steps_info:
+            if isinstance(step, dict):
+                should_swap = True
+                new_step_info.append(ModflowStep(**step))
+
+        if should_swap:
+            self.steps_info = new_step_info
+
     def to_json(self):
         steps_info = copy.deepcopy(self.steps_info)
         self.steps_info = [info.__dict__ for info in self.steps_info]

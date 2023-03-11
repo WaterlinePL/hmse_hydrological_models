@@ -1,0 +1,2 @@
+class UnsupportedFloatFormat(Exception):
+    pass

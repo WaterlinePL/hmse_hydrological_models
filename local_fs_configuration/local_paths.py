@@ -1,7 +1,8 @@
 import os
+from typing import Optional
 
 from hmse_simulations.hmse_projects.hmse_hydrological_models.local_fs_configuration.path_constants import \
-    WORKSPACE_PATH, SIMULATION_DIR, METADATA_FILENAME, MODFLOW_OUTPUT_JSON
+    WORKSPACE_PATH, SIMULATION_DIR, METADATA_FILENAME, MODFLOW_OUTPUT_JSON, get_feedback_loop_hydrus_name
 
 
 def get_root_dir(project_id: str, simulation_mode: bool) -> str:
@@ -44,8 +45,15 @@ def get_modflow_model_path(project_id: str, modflow_id: str, simulation_mode: bo
     return os.path.join(get_modflow_dir(project_id, simulation_mode), modflow_id)
 
 
-def get_hydrus_model_path(project_id: str, hydrus_id: str, simulation_mode: bool = False) -> str:
-    return os.path.join(get_hydrus_dir(project_id, simulation_mode), hydrus_id)
+def get_hydrus_model_path(project_id: str, hydrus_id: str, simulation_mode: bool = False,
+                          shape_id: Optional[str] = None) -> str:
+    true_hydrus_id = get_feedback_loop_hydrus_name(hydrus_id, shape_id) if shape_id else hydrus_id
+    return os.path.join(get_hydrus_dir(project_id, simulation_mode), true_hydrus_id)
+
+
+def get_simulation_per_shape_hydrus_model_path(project_id: str, hydrus_id: str, shape_id: str) -> str:
+    return os.path.join(get_hydrus_dir(project_id, simulation_mode=True),
+                        get_feedback_loop_hydrus_name(hydrus_id, shape_id))
 
 
 def get_weather_model_path(project_id: str, weather_id: str, simulation_mode: bool = False) -> str:
