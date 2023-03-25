@@ -12,6 +12,7 @@ from ..model_exceptions import ModflowMissingFileError, ModflowCommonError
 from . import modflow_extra_data
 from .modflow_extra_data import ModflowExtraData
 from .modflow_metadata import ModflowMetadata
+from ..unit_manager import LengthUnit
 
 
 def adapt_model_to_display(metadata: ModflowMetadata):
@@ -48,7 +49,7 @@ def extract_metadata(modflow_archive, tmp_dir: os.PathLike) -> Tuple[ModflowMeta
                                          rows=model_shape[0], cols=model_shape[1],
                                          row_cells=model.dis.delc.array.tolist(),
                                          col_cells=model.dis.delr.array.tolist(),
-                                         grid_unit=model.modelgrid.units,
+                                         grid_unit=LengthUnit.map_from_alias(model.modelgrid.units),
                                          steps_info=model_steps)
         extra_data = ModflowExtraData(
             **modflow_extra_data.extract_extra_from_model(model),

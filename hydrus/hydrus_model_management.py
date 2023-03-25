@@ -9,10 +9,9 @@ from .file_processing.meteo_in_processor import MeteoInProcessor
 from .file_processing.nod_inf_out_processor import NodInfOutProcessor
 from .file_processing.profile_dat_processor import ProfileDatProcessor
 from .file_processing.selector_in_processor import SelectorInProcessor
-from .. import measure_unit_manager
 from ..local_fs_configuration import local_paths
 from ..local_fs_configuration.feedback_loop_file_management import find_previous_simulation_step_dir
-from ..modflow.modflow_step import ModflowStepType
+from ..unit_manager import LengthUnit
 
 
 def prepare_model_for_next_iteration(project_id: str, ref_hydrus_id: str, compound_hydrus_id: str, spin_up: int):
@@ -42,11 +41,10 @@ def update_bottom_pressure(project_id: str,
     model_dir = local_paths.get_hydrus_model_path(project_id, hydrus_id, simulation_mode=True)
     profile_dat_path = hydrus_utils.find_hydrus_file_path(model_dir, file_name="profile.dat")
     with open(profile_dat_path, 'r+', encoding="utf-8") as fp:
-        processor = ProfileDatProcessor(fp)
-        processor.swap_pressure(btm_pressure_val)
+        ProfileDatProcessor(fp).swap_pressure(btm_pressure_val)
 
 
-def get_profile_depth(project_id: str, hydrus_id: str) -> float:
+def get_profile_depth(project_id: str, hydrus_id: str) -> Tuple[float, LengthUnit]:
     model_dir = local_paths.get_hydrus_model_path(project_id, hydrus_id, simulation_mode=True)
     hydrus_info_file_path = hydrus_utils.find_hydrus_file_path(model_dir, file_name="hydrus1d.dat")
     with open(hydrus_info_file_path, 'r', encoding='utf-8') as fp:
@@ -54,11 +52,10 @@ def get_profile_depth(project_id: str, hydrus_id: str) -> float:
         depth = None
         for line in fp.readlines():
             if line.startswith("SpaceUnit"):
-                unit = line.split('=')[1]
+                unit = line.split('=')[1].strip()
             elif line.startswith("ProfileDepth"):
                 depth = float(line.split('=')[1])
-        measure_unit_manager.validate_measure_unit(unit)  # TODO
-        return depth
+        return depth, LengthUnit(unit)
 
 
 def __use_magical_function(project_id: str, hydrus_id: str) -> None:
@@ -75,13 +72,11 @@ def __create_temporary_model(ref_hydrus_dir: str, prev_hydrus_dir: str, new_hydr
     if prev_hydrus_dir:
         nod_inf_path = hydrus_utils.find_hydrus_file_path(prev_hydrus_dir, file_name="nod_inf.out")
         with open(nod_inf_path, 'r', encoding='utf-8') as fp:
-            nod_inf_processor = NodInfOutProcessor(fp)
-            prev_node_pressure = nod_inf_processor.read_node_pressure()
+            prev_node_pressure = NodInfOutProcessor(fp).read_node_pressure()
 
         profile_dat_path = hydrus_utils.find_hydrus_file_path(new_hydrus_dir, file_name="profile.dat")
         with open(profile_dat_path, 'r+', encoding='utf-8') as fp:
-            profile_dat_processor = ProfileDatProcessor(fp)
-            profile_dat_processor.swap_pressure(prev_node_pressure)
+            ProfileDatProcessor(fp).swap_pressure(prev_node_pressure)
 
         prev_iter_t_level_out = hydrus_utils.find_hydrus_file_path(prev_hydrus_dir, file_name="t_level.out")
         new_t_level_out = (hydrus_utils.find_hydrus_file_path(new_hydrus_dir, file_name="t_level.out")
@@ -93,18 +88,23 @@ def __create_temporary_model(ref_hydrus_dir: str, prev_hydrus_dir: str, new_hydr
 
     atmosph_in_path = hydrus_utils.find_hydrus_file_path(new_hydrus_dir, file_name="atmosph.in")
     with open(atmosph_in_path, 'r+', encoding='utf-8') as fp:
-        atmosph_in_processor = AtmosphInProcessor(fp)
-        atmosph_in_processor.truncate_file(first_step, step_count)
+        atmo_first_jul_day, atmo_last_jul_day = AtmosphInProcessor(fp).truncate_file(first_step, step_count)
 
     meteo_in_path = hydrus_utils.find_hydrus_file_path(new_hydrus_dir, file_name="meteo.in")
     with open(meteo_in_path, 'r+', encoding='utf-8') as fp:
-        meteo_in_processor = MeteoInProcessor(fp)
-        meteo_in_processor.truncate_file(first_step, step_count)
+        meteo_first_jul_day, meteo_last_jul_day = MeteoInProcessor(fp).truncate_file(first_step, step_count)
 
+    if atmo_first_jul_day != meteo_first_jul_day or atmo_last_jul_day != meteo_last_jul_day:
+        raise RuntimeError(f"ATMPOSH.IN and METEO.IN record ranges do not match: "
+                           f"ATMOSPH.IN: ({atmo_first_jul_day}, {atmo_last_jul_day}) "
+                           f"METEO.IN: ({meteo_first_jul_day}, {meteo_last_jul_day})")
+
+    first_record_day = meteo_first_jul_day
+    last_record_day = meteo_last_jul_day
     selector_in_path = hydrus_utils.find_hydrus_file_path(new_hydrus_dir, file_name="selector.in")
     with open(selector_in_path, 'r+', encoding='utf-8') as fp:
         selector_in_processor = SelectorInProcessor(fp)
-        selector_in_processor.update_initial_and_final_step(first_step, step_count)
+        selector_in_processor.update_initial_and_final_step(first_record_day, last_record_day)
 
 
 def __get_hydrus_time_range(project_metadata: Dict, step: int, spin_up: int) -> Tuple[int, int]:

@@ -5,6 +5,7 @@ import numpy as np
 from typing.io import TextIO
 
 from .. import hydrus_number_formatter
+from ... import julian_calendar_manager
 
 
 @dataclass
@@ -28,6 +29,11 @@ class TextFileProcessor(ABC):
             if not formatted_new_val.startswith('-'):
                 formatted_new_val = f"  {formatted_new_val}"
         return line[:copy_prefix_len] + formatted_new_val + line[value_start_idx + len(current_value):]
+
+    @staticmethod
+    def _rewrite_line_to_julian(line: str) -> str:
+        julian_day_val = julian_calendar_manager.float_to_julian(float(line.split()[0]))
+        return TextFileProcessor._substitute_in_line(line, julian_day_val, col_idx=0)
 
     @staticmethod
     def _read_value_from_col(line: str, col_idx: int):

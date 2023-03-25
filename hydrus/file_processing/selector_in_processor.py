@@ -1,29 +1,51 @@
-import math
+import re
 from dataclasses import dataclass
 
-from hmse_simulations.hmse_projects.hmse_hydrological_models.hydrus.file_processing.text_file_processor import \
-    TextFileProcessor
+from .text_file_processor import TextFileProcessor
+from ...unit_manager import LengthUnit
 
 
 @dataclass
 class SelectorInProcessor(TextFileProcessor):
 
-    def update_initial_and_final_step(self, first_step: int, step_count: int):
+    def get_model_length(self) -> LengthUnit:
         self._reset()
-        line = self.fp.readline()
-        while line:
-            if line.strip().startswith("tInit"):
-                line_start = self.fp.tell()
-                line_with_step_data = self.fp.readline()
-                time_step_data = line_with_step_data.split()
-                t_init, t_max = time_step_data[0], time_step_data[1]
-                new_t_init = float(t_init) + first_step
-                new_t_max = math.ceil(new_t_init + step_count)
-                new_line = TextFileProcessor._substitute_in_line(line_with_step_data, new_t_init, col_idx=0)
-                new_line = TextFileProcessor._substitute_in_line(new_line, new_t_max, col_idx=1)
-                self.fp.seek(line_start)
-                self.fp.write(new_line)
-                break
+        lines = self.fp.readlines()
+        for i, line in enumerate(lines):
+            if "LUnit" in line:
+                unit = lines[i + 1].strip().split()[0].strip()
+                return LengthUnit(unit)
+        raise RuntimeError(f"Invalid data, no length unit found file ({self.fp.name})")
 
-            line_start_ptr = self.fp.tell()
-            line = self.fp.readline()
+    def update_initial_and_final_step(self, first_day: float, last_day: float):
+        self._reset()
+        lines = self.fp.readlines()
+        for i, line in enumerate(lines):
+            to_write = line
+            write_idx = i
+            if line.strip().endswith("MPL"):
+                line_with_node_information = lines[i + 1]
+                to_write = TextFileProcessor._substitute_in_line(line_with_node_information, 1, col_idx=7)
+                write_idx = i + 1
+            elif line.strip().startswith("tInit"):
+                line_with_step_data = lines[i + 1]
+                new_t_init = first_day - 0.01
+                new_t_max = last_day
+                new_line = TextFileProcessor._substitute_in_line(line_with_step_data, new_t_init, col_idx=0)
+                to_write = TextFileProcessor._substitute_in_line(new_line, new_t_max, col_idx=1)
+                write_idx = i + 1
+            elif line.strip().startswith("TPrint(1)"):
+                line_with_print_node_information_config = lines[i + 1]
+                new_line = TextFileProcessor._substitute_in_line(line_with_print_node_information_config,
+                                                                 last_day, col_idx=0)
+                end = re.search(r'\d+(\.\d+)?', new_line).end()
+                padding = ' ' * (len(new_line) - end - 1)
+                to_write = new_line[:end] + padding + '\n'
+                write_idx = i + 1
+            if to_write[-1] != '\n':
+                to_write = to_write + '\n'
+            lines[write_idx] = to_write
+
+        self._reset()
+        self.fp.writelines(lines)
+        self.fp.truncate()

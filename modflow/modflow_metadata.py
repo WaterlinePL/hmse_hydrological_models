@@ -3,6 +3,7 @@ from dataclasses import dataclass, field
 from typing import List
 
 from .modflow_step import ModflowStep, ModflowStepType
+from ..unit_manager import LengthUnit
 from ..typing_help import ModflowID
 
 
@@ -11,7 +12,7 @@ class ModflowMetadata:
     modflow_id: ModflowID
     rows: int
     cols: int
-    grid_unit: str  # Maybe enum
+    grid_unit: LengthUnit
     steps_info: List[ModflowStep]
     row_cells: List[float] = field(default_factory=list)
     col_cells: List[float] = field(default_factory=list)

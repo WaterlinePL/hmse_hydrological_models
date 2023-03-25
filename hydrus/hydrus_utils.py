@@ -61,17 +61,7 @@ def get_hydrus_length_unit(model_path: str):
     filepath = os.path.join(model_path, "SELECTOR.IN")
     selector_file = open(filepath, 'r')
 
-    lines = selector_file.readlines()
-    i = 0
 
-    while True:
-        if i >= len(lines):
-            logging.log(logging.ERROR, f"Invalid SELECTOR.IN file for model {model_path}, no length unit found")
-        curr_line = lines[i]
-        if "LUnit" in curr_line:
-            unit = lines[i + 1].strip()
-            return unit
-        i += 1
 
 
 # Files: PROFILE.DAT, etc.
