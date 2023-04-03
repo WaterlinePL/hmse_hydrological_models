@@ -136,11 +136,13 @@ def transfer_water_level_to_hydrus(project_id: str,
 
 def pass_weather_data_to_hydrus(project_id: str,
                                 hydrus_to_weather_mapping: Dict[str, str]) -> None:
-    for hydrus_id, weather_id in hydrus_to_weather_mapping:
+    for hydrus_id, weather_id in hydrus_to_weather_mapping.items():
         hydrus_path = local_paths.get_hydrus_model_path(project_id, hydrus_id, simulation_mode=True)
         selector_in_path = hydrus_utils.find_hydrus_file_path(hydrus_path, file_name="selector.in")
+
         with open(selector_in_path, 'r', encoding='utf-8') as fp:
             hydrus_length_unit = SelectorInProcessor(fp).get_model_length()
+
         raw_data = weather_util.read_weather_csv(local_paths.get_weather_model_path(project_id, weather_id))
         ready_data = weather_util.adapt_data(raw_data, hydrus_length_unit)
         success = weather_util.add_weather_to_hydrus_model(hydrus_path, ready_data)

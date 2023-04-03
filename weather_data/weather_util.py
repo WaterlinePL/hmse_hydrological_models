@@ -1,7 +1,10 @@
 import csv
 import logging
-import os
 from collections import defaultdict
+
+from .. import julian_calendar_manager
+from ..hydrus import hydrus_utils
+from ..hydrus.file_processing.selector_in_processor import SelectorInProcessor
 
 
 def read_weather_csv(filepath: str):
@@ -15,6 +18,7 @@ def read_weather_csv(filepath: str):
     data = defaultdict(list)
     file = open(filepath)
     reader = csv.DictReader(file)
+    jul_day_iter = -1
 
     for line in reader:
         for column, value in line.items():
@@ -26,6 +30,11 @@ def read_weather_csv(filepath: str):
             # for everything except date cast the numeric string to a true float
             if column != "Date":
                 value = float(value)
+            else:
+                if jul_day_iter <= 0:
+                    jul_day_iter = julian_calendar_manager.date_to_julian(value)
+                value = jul_day_iter
+                jul_day_iter += 1
 
             data[column].append(value)
 
@@ -57,6 +66,7 @@ def adapt_data(data: dict, hydrus_dist_unit: str):
     return data
 
 
+DATE = "Date"
 LATITUDE = 'Latitude'
 ELEVATION = 'Elevation'
 RAD = 'Solar'
@@ -77,23 +87,29 @@ def add_weather_to_hydrus_model(model_path: str, data: dict):
     """
 
     # modify meteo file if it exists, return if encountered issues
-    if os.path.isfile(os.path.join(model_path, "METEO.IN")):
-        meteo_file_modified = __modify_meteo_file(model_path, data)
+    meteo_path = hydrus_utils.find_hydrus_file_path(model_path, file_name="meteo.in")
+    if meteo_path:
+        meteo_file_modified = __modify_meteo_file(meteo_path, data)
         if not meteo_file_modified:
             return False
 
     # modify atmosph file is it exists
     replace_rain = PRECIPITATION in data.keys()
-    if replace_rain and os.path.isfile(os.path.join(model_path, "ATMOSPH.IN")):
-        atmosph_file_modified = __modify_atmosph_file(model_path, data)
+    atmosph_path = hydrus_utils.find_hydrus_file_path(model_path, file_name="atmosph.in")
+    if replace_rain and atmosph_path:
+        atmosph_file_modified = __modify_atmosph_file(atmosph_path, data)
         if not atmosph_file_modified:
             return False
+
+    selector_path = hydrus_utils.find_hydrus_file_path(model_path, file_name="selector.in")
+    if selector_path:
+        with open(selector_path, 'r+', encoding='utf-8') as fp:
+            SelectorInProcessor(fp).update_initial_and_final_step(data[DATE][0], data[DATE][-1])
 
     return True
 
 
-def __modify_meteo_file(model_dir, data):
-    meteo_file_path = os.path.join(model_dir, "METEO.IN")
+def __modify_meteo_file(meteo_file_path, data):
     meteo_file = open(meteo_file_path, "r+")
 
     old_file_lines = meteo_file.readlines()
@@ -154,6 +170,7 @@ def __modify_meteo_file(model_dir, data):
             break
 
         curr_row = old_file_lines[i].split()
+        curr_row[0] = data[DATE][data_row]
         if replace_rad:
             curr_row[1] = data[RAD][data_row]
         if replace_tmax:
@@ -179,8 +196,7 @@ def __modify_meteo_file(model_dir, data):
     return True
 
 
-def __modify_atmosph_file(model_dir, data):
-    atmosph_file_path = os.path.join(model_dir, "ATMOSPH.IN")
+def __modify_atmosph_file(atmosph_file_path, data):
     atmosph_file = open(atmosph_file_path, "r+")
 
     old_file_lines = atmosph_file.readlines()
@@ -220,6 +236,7 @@ def __modify_atmosph_file(model_dir, data):
             break
 
         curr_row = old_file_lines[i].split()
+        curr_row[0] = data[DATE][data_row]
         curr_row[1] = data[PRECIPITATION][data_row]
         new_file_lines.append(__build_line(curr_row))
 
