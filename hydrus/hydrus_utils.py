@@ -1,7 +1,7 @@
 import logging
 import os
 from collections import defaultdict
-from typing import List, Union, Optional, Dict, Tuple
+from typing import List, Union, Optional, Dict, Tuple, Set
 from zipfile import ZipFile
 
 from ..local_fs_configuration import path_constants
@@ -12,6 +12,11 @@ EXPECTED_INPUT_FILES = ["SELECTOR.IN", "ATMOSPH.IN"]
 
 def get_hydrus_input_files(model_path: Union[os.PathLike, str]) -> List[str]:
     return [file.casefold() for file in os.listdir(model_path) if file.lower().endswith(".in")]
+
+
+def get_used_hydrus_models(shapes_to_hydrus: Dict[str, Union[str, float]]) -> Set[str]:
+    return {hydrus_id for hydrus_id in shapes_to_hydrus.values()
+            if isinstance(hydrus_id, str)}
 
 
 def get_hydrus_to_shapes_mapping(shapes_to_hydrus: Dict[str, Union[str, float]]) -> Dict[str, List[str]]:
@@ -49,19 +54,6 @@ def validate_model(hydrus_archive, validation_dir: os.PathLike):
             if expected_file.casefold() not in input_files:
                 raise HydrusMissingFileError(description=f"Invalid Hydrus model - validation detected "
                                                          f"missing file: {expected_file}")
-
-
-def get_hydrus_length_unit(model_path: str):
-    """
-    Extracts the length unit used for a given hydrus model.
-
-    :param model_path: the model to get the unit from
-    :return: unit, string - "m", "cm" or "mm"
-    """
-    filepath = os.path.join(model_path, "SELECTOR.IN")
-    selector_file = open(filepath, 'r')
-
-
 
 
 # Files: PROFILE.DAT, etc.
