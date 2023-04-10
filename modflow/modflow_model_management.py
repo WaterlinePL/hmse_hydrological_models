@@ -29,18 +29,22 @@ def get_avg_water_depth_for_shape(project_id: str,
     model_dir = local_paths.get_modflow_model_path(project_id, modflow_id, simulation_mode=True)
     nam_file_name = modflow_utils.scan_for_modflow_file(model_dir, ext=".nam")
 
+    packages = ["dis", "bas6"]
     if use_modflow_results:
-        packages = ["dis"]
         fhd_file_name = modflow_utils.scan_for_modflow_file(model_dir, ext=".fhd")
         fhd_data = FormattedHeadFile(os.path.join(model_dir, fhd_file_name))
     else:
-        packages = ["dis", "bas6"]
         fhd_data = None
 
     model = Modflow.load(nam_file_name, model_ws=model_dir, load_only=packages, forgive=True)
     mask = np.load(local_paths.get_shape_path(project_id, shape_id))
     avg_terrain_lvl = __get_avg_terrain_level(model, shape_mask=mask)
-    avg_water_lvl = __get_avg_water_level(model, shape_mask=mask, fhd_data=fhd_data)
+
+    inbound = next(pkg for pkg in model.packagelist if isinstance(pkg, ModflowBas)).ibound[0].array
+    avg_water_lvl = __get_avg_water_level(model, shape_mask=mask*inbound, fhd_data=fhd_data)
+
+    if use_modflow_results:
+        fhd_data.close()
     return avg_terrain_lvl - avg_water_lvl
 
 
@@ -73,6 +77,7 @@ def __create_temporary_model(ref_modflow_dir: str, prev_modflow_dir: Optional[st
         bas_package = next(pkg for pkg in dst_model.packagelist if isinstance(pkg, ModflowBas))
         bas_package.strt = prev_model_fhd.get_data()
         bas_package.write_file()
+        prev_model_fhd.close()
 
     # Crop packages to one timestep
     modflow_package_manager.create_packages_for_step(dst_model, step)
