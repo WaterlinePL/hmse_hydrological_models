@@ -6,6 +6,7 @@ from zipfile import ZipFile
 
 import flopy
 import numpy as np
+from flopy.modflow import ModflowBas
 
 from .modflow_step import ModflowStep, ModflowStepType
 from ..model_exceptions import ModflowMissingFileError, ModflowCommonError
@@ -27,7 +28,7 @@ def adapt_model_to_display(metadata: ModflowMetadata):
                                                       steps_info=copy.deepcopy(metadata.steps_info))
 
 
-def extract_metadata(modflow_archive, tmp_dir: os.PathLike) -> Tuple[ModflowMetadata, ModflowExtraData]:
+def extract_metadata(modflow_archive, tmp_dir: os.PathLike) -> Tuple[ModflowMetadata, ModflowExtraData, np.ndarray]:
     extension = modflow_archive.filename.split('.')[-1]
     modflow_id = modflow_archive.filename.replace(f".{extension}", "")
 
@@ -51,11 +52,12 @@ def extract_metadata(modflow_archive, tmp_dir: os.PathLike) -> Tuple[ModflowMeta
                                          col_cells=model.dis.delr.array.tolist(),
                                          grid_unit=LengthUnit.map_from_alias(model.modelgrid.units),
                                          steps_info=model_steps)
+        rch_shape_data, inactive_cells_data = get_shapes_from_rch(model_path=tmp_dir, model_shape=model_shape)
         extra_data = ModflowExtraData(
             **modflow_extra_data.extract_extra_from_model(model),
-            rch_shapes=get_shapes_from_rch(model_path=tmp_dir, model_shape=model_shape)
+            rch_shapes=rch_shape_data
         )
-        return model_metadata, extra_data
+        return model_metadata, extra_data, inactive_cells_data
 
 
 def __validate_model(model_path: os.PathLike) -> None:
@@ -108,7 +110,7 @@ def scale_cells_size(row_cells: List[float],
     return list(row_cells), list(col_cells), int(total_width), int(total_height)
 
 
-def get_shapes_from_rch(model_path: os.PathLike, model_shape: Tuple[int, int]) -> List[np.ndarray]:
+def get_shapes_from_rch(model_path: os.PathLike, model_shape: Tuple[int, int]) -> Tuple[List[np.ndarray], np.ndarray]:
     """
     Defines shapes masks for uploaded Modflow model based on recharge
 
@@ -120,10 +122,9 @@ def get_shapes_from_rch(model_path: os.PathLike, model_shape: Tuple[int, int]) -
     nam_file_name = scan_for_modflow_file(model_path)
     modflow_model = flopy.modflow.Modflow.load(nam_file_name,
                                                model_ws=model_path,
-                                               load_only=["rch"],
+                                               load_only=["rch", "bas6"],
                                                forgive=True)
 
-    # FIXME: This MIGHT require a consultation with somebody
     stress_period = 0
     layer = 0
 
@@ -142,7 +143,9 @@ def get_shapes_from_rch(model_path: os.PathLike, model_shape: Tuple[int, int]) -
                                       row=row, col=col,
                                       value=recharge_array[row][col])
 
-    return recharge_masks
+    ibound = next(pkg for pkg in modflow_model.packagelist if isinstance(pkg, ModflowBas)).ibound[0].array
+    inactive_cells = (ibound - 1) % 2
+    return recharge_masks, inactive_cells
 
 
 def __fill_mask_iterative(mask: np.ndarray,
