@@ -49,11 +49,12 @@ def validate_model(hydrus_archive, validation_dir: os.PathLike):
     hydrus_archive.save(hydrus_path)
     with ZipFile(hydrus_path, 'r') as archive:
         archive.extractall(validation_dir)
-        input_files = get_hydrus_input_files(validation_dir)
-        for expected_file in EXPECTED_INPUT_FILES:
-            if expected_file.casefold() not in input_files:
-                raise HydrusMissingFileError(description=f"Invalid Hydrus model - validation detected "
-                                                         f"missing file: {expected_file}")
+    os.remove(hydrus_path)
+    input_files = get_hydrus_input_files(validation_dir)
+    for expected_file in EXPECTED_INPUT_FILES:
+        if expected_file.casefold() not in input_files:
+            raise HydrusMissingFileError(description=f"Invalid Hydrus model - validation detected "
+                                                     f"missing file: {expected_file}")
 
 
 # Files: PROFILE.DAT, etc.

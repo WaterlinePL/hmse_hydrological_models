@@ -36,28 +36,29 @@ def extract_metadata(modflow_archive, tmp_dir: os.PathLike) -> Tuple[ModflowMeta
     modflow_archive.save(modflow_path)
     with ZipFile(modflow_path, 'r') as archive:
         archive.extractall(tmp_dir)
-        __validate_model(tmp_dir)
+    os.remove(modflow_path)
+    __validate_model(tmp_dir)
 
-        model = flopy.modflow.Modflow.load(scan_for_modflow_file(tmp_dir),
-                                           model_ws=tmp_dir,
-                                           load_only=["rch", "dis"],
-                                           forgive=True)
+    model = flopy.modflow.Modflow.load(scan_for_modflow_file(tmp_dir),
+                                       model_ws=tmp_dir,
+                                       load_only=["rch", "dis"],
+                                       forgive=True)
 
-        model_shape = (model.nrow, model.ncol)
-        model_steps = [ModflowStep(duration=int(duration), type=ModflowStepType.from_bool(is_steady_state))
-                       for is_steady_state, duration in zip(model.modeltime.steady_state, model.modeltime.perlen)]
-        model_metadata = ModflowMetadata(modflow_id,
-                                         rows=model_shape[0], cols=model_shape[1],
-                                         row_cells=model.dis.delc.array.tolist(),
-                                         col_cells=model.dis.delr.array.tolist(),
-                                         grid_unit=LengthUnit.map_from_alias(model.modelgrid.units),
-                                         steps_info=model_steps)
-        rch_shape_data, inactive_cells_data = get_shapes_from_rch(model_path=tmp_dir, model_shape=model_shape)
-        extra_data = ModflowExtraData(
-            **modflow_extra_data.extract_extra_from_model(model),
-            rch_shapes=rch_shape_data
-        )
-        return model_metadata, extra_data, inactive_cells_data
+    model_shape = (model.nrow, model.ncol)
+    model_steps = [ModflowStep(duration=int(duration), type=ModflowStepType.from_bool(is_steady_state))
+                   for is_steady_state, duration in zip(model.modeltime.steady_state, model.modeltime.perlen)]
+    model_metadata = ModflowMetadata(modflow_id,
+                                     rows=model_shape[0], cols=model_shape[1],
+                                     row_cells=model.dis.delc.array.tolist(),
+                                     col_cells=model.dis.delr.array.tolist(),
+                                     grid_unit=LengthUnit.map_from_alias(model.modelgrid.units),
+                                     steps_info=model_steps)
+    rch_shape_data, inactive_cells_data = get_shapes_from_rch(model_path=tmp_dir, model_shape=model_shape)
+    extra_data = ModflowExtraData(
+        **modflow_extra_data.extract_extra_from_model(model),
+        rch_shapes=rch_shape_data
+    )
+    return model_metadata, extra_data, inactive_cells_data
 
 
 def __validate_model(model_path: os.PathLike) -> None:

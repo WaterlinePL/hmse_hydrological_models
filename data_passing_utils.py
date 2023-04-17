@@ -99,7 +99,7 @@ def __get_sum_vbot(project_id: str, mapping_val: Union[str, float], modflow_unit
 
 
 def __recharge_update(modflow_model, shapes_for_model, avg_sum_v_bot):
-    shape = max(shapes_for_model) if len(shapes_for_model) > 1 else shapes_for_model[0]
+    shape = np.amax(shapes_for_model, axis=0) if len(shapes_for_model) > 1 else shapes_for_model[0]
     mask = (shape == 1)  # Frontend sets explicitly 1
     for idx, stress_period_duration in enumerate(modflow_model.modeltime.perlen):
         # modflow rch array for given stress period
