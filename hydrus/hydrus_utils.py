@@ -8,6 +8,30 @@ from ..local_fs_configuration import path_constants
 from ..model_exceptions import HydrusMissingFileError
 
 EXPECTED_INPUT_FILES = ["SELECTOR.IN", "ATMOSPH.IN"]
+HYDRUS_PROPER_CASING = {
+    "meteo.in": "Meteo.in",
+    "atmosph.in": "ATMOSPH.IN",
+    "selector.in": "SELECTOR.IN",
+    "options.in": "Options.in",
+    "hysteresis.in": "Hysteresis.in",
+    "mater.in": "Mater.in",
+    "moistdep.in": "MoistDep.in",
+
+    "profile.dat": "PROFILE.DAT",
+
+    "solutex.out": "solutex.out",
+    "nod_inf_v.out": "NOD_INF_V.OUT",
+    "t_level1.out": "T_Level1.OUT",
+    "profile.out": "PROFILE.OUT",
+    "obs_node.out": "OBS_NODE.OUT",
+    "balance.out": "BALANCE.OUT",
+    "nod_inf.out": "NOD_INF.OUT",
+    "t_level.out": "T_LEVEL.OUT",
+    "run_inf.out": "RUN_INF.OUT",
+    "i_check.out": "I_CHECK.OUT",
+    "meteo.out": "Meteo.out",
+    "a_level.out": "A_LEVEL.OUT"
+}
 
 
 def get_hydrus_input_files(model_path: Union[os.PathLike, str]) -> List[str]:
@@ -55,9 +79,22 @@ def validate_model(hydrus_archive, validation_dir: os.PathLike):
         if expected_file.casefold() not in input_files:
             raise HydrusMissingFileError(description=f"Invalid Hydrus model - validation detected "
                                                      f"missing file: {expected_file}")
+    __fix_casing_hydrus_project(validation_dir)
 
 
 # Files: PROFILE.DAT, etc.
 def find_hydrus_file_path(hydrus_base_dir: str, file_name: str) -> Optional[str]:
     file = next(f for f in os.listdir(hydrus_base_dir) if f.lower() == file_name.lower())
     return os.path.join(hydrus_base_dir, file) if file else None
+
+
+def __fix_casing_hydrus_project(hydrus_base_dir: str):
+    for file in os.listdir(hydrus_base_dir):
+        lowercase_file = file.lower()
+        if lowercase_file not in HYDRUS_PROPER_CASING:
+            logging.info(f"Skipping case-fixing for file: {file}")
+            continue
+
+        old_file = os.path.join(hydrus_base_dir, file)
+        new_file = os.path.join(hydrus_base_dir, HYDRUS_PROPER_CASING[lowercase_file])
+        os.rename(old_file, new_file)
