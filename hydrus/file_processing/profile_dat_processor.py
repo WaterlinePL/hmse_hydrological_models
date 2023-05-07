@@ -40,7 +40,6 @@ class ProfileDatProcessor(TextFileProcessor):
                     self.fp.write(new_line)
                     break
                 elif not swap_only_at_bottom:
-
                     new_line = TextFileProcessor._substitute_in_line(line, pressure[profile_info_counter], col_idx=2)
                     self.fp.seek(line_start_ptr)
                     self.fp.write(new_line)

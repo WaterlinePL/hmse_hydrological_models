@@ -9,6 +9,7 @@ from .file_processing.meteo_in_processor import MeteoInProcessor
 from .file_processing.nod_inf_out_processor import NodInfOutProcessor
 from .file_processing.profile_dat_processor import ProfileDatProcessor
 from .file_processing.selector_in_processor import SelectorInProcessor
+from .hydrus_profile_pressure_calculator import calculate_pressure_for_hydrus_model
 from ..local_fs_configuration import local_paths
 from ..local_fs_configuration.feedback_loop_file_management import find_previous_simulation_step_dir
 from ..unit_manager import LengthUnit
@@ -40,8 +41,9 @@ def update_bottom_pressure(project_id: str,
                            btm_pressure_val: float) -> None:
     model_dir = local_paths.get_hydrus_model_path(project_id, hydrus_id, simulation_mode=True)
     profile_dat_path = hydrus_utils.find_hydrus_file_path(model_dir, file_name="profile.dat")
+    new_pressure_in_profile = calculate_pressure_for_hydrus_model(model_dir, btm_pressure=btm_pressure_val)
     with open(profile_dat_path, 'r+', encoding="utf-8") as fp:
-        ProfileDatProcessor(fp).swap_pressure(btm_pressure_val)
+        ProfileDatProcessor(fp).swap_pressure(new_pressure_in_profile)
 
 
 def get_profile_depth(project_id: str, hydrus_id: str) -> Tuple[float, LengthUnit]:
@@ -56,11 +58,6 @@ def get_profile_depth(project_id: str, hydrus_id: str) -> Tuple[float, LengthUni
             elif line.startswith("ProfileDepth"):
                 depth = float(line.split('=')[1])
         return depth, LengthUnit(unit)
-
-
-def __use_magical_function(project_id: str, hydrus_id: str) -> None:
-    # TODO: waiting for Mr. Szymkiewicz
-    pass
 
 
 def __create_temporary_model(ref_hydrus_dir: str, prev_hydrus_dir: str, new_hydrus_dir: str,
