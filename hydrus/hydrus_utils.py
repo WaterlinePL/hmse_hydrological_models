@@ -79,7 +79,7 @@ def validate_model(hydrus_archive, validation_dir: os.PathLike):
         if expected_file.casefold() not in input_files:
             raise HydrusMissingFileError(description=f"Invalid Hydrus model - validation detected "
                                                      f"missing file: {expected_file}")
-    __fix_casing_hydrus_project(validation_dir)
+    __fix_hydrus_project(validation_dir)
 
 
 # Files: PROFILE.DAT, etc.
@@ -88,7 +88,7 @@ def find_hydrus_file_path(hydrus_base_dir: str, file_name: str) -> Optional[str]
     return os.path.join(hydrus_base_dir, file) if file else None
 
 
-def __fix_casing_hydrus_project(hydrus_base_dir: str):
+def __fix_hydrus_project(hydrus_base_dir: str):
     for file in os.listdir(hydrus_base_dir):
         lowercase_file = file.lower()
         if lowercase_file not in HYDRUS_PROPER_CASING:
@@ -98,3 +98,9 @@ def __fix_casing_hydrus_project(hydrus_base_dir: str):
         old_file = os.path.join(hydrus_base_dir, file)
         new_file = os.path.join(hydrus_base_dir, HYDRUS_PROPER_CASING[lowercase_file])
         os.rename(old_file, new_file)
+        with open(new_file, 'r+b') as fp:
+            original_content = fp.read()
+            lf_separated_lines = original_content.replace(b'\r\n', b'\n')
+            fp.seek(0)
+            fp.write(lf_separated_lines)
+            fp.truncate()
