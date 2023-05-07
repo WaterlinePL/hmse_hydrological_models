@@ -1,5 +1,8 @@
 import re
 from dataclasses import dataclass
+from typing import Dict
+
+import pandas as pd
 
 from .text_file_processor import TextFileProcessor
 from ...unit_manager import LengthUnit
@@ -49,3 +52,44 @@ class SelectorInProcessor(TextFileProcessor):
         self._reset()
         self.fp.writelines(lines)
         self.fp.truncate()
+
+    def read_waterflow_config(self) -> Dict:
+        self._reset()
+        lines = self.fp.readlines()
+        block = None
+
+        for i, line in enumerate(lines):
+            block_match = re.search(r'(?<=BLOCK )[A-G](?=:)', line)
+            if block_match:
+                block = block_match[1].strip()
+                continue
+            if block == "B" and "Model" in line:
+                iModel = lines[i + 1].strip().split()[0].strip()
+                return {"iModel": iModel}
+        raise RuntimeError(f"Invalid data, water iModel specified in ({self.fp.name})")
+
+    def read_material_properties(self) -> pd.DataFrame:
+        self._reset()
+        lines = self.fp.readlines()
+        block = None
+        materials_found = False
+        material_properties = []
+
+        for i, line in enumerate(lines):
+            block_match = re.search(r'(?<=BLOCK )[A-G](?=:)', line)
+            if block_match:
+                block = block_match[1].strip()
+                continue
+            if block == "B" and "thr" in line:
+                materials_found = True
+                continue
+
+            if materials_found:
+                if re.search(r'\d', line):
+                    # material data line
+                    m_props = list(map(float, line.strip().split()))
+                    material_properties.append(m_props)
+                else:
+                    return pd.DataFrame(material_properties)
+        raise RuntimeError(f"Invalid data, water iModel specified in ({self.fp.name})")
+
