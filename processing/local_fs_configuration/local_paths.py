@@ -1,8 +1,8 @@
 import os
 from typing import Optional
 
-from hmse_simulations.hmse_projects.hmse_hydrological_models.local_fs_configuration.path_constants import \
-    WORKSPACE_PATH, SIMULATION_DIR, METADATA_FILENAME, MODFLOW_OUTPUT_JSON, get_feedback_loop_hydrus_name
+from .path_constants import WORKSPACE_PATH, SIMULATION_DIR, METADATA_FILENAME, MODFLOW_OUTPUT_JSON,\
+    get_feedback_loop_hydrus_name
 
 
 def get_root_dir(project_id: str, simulation_mode: bool) -> str:
