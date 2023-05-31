@@ -9,7 +9,7 @@ from .file_processing.meteo_in_processor import MeteoInProcessor
 from .file_processing.nod_inf_out_processor import NodInfOutProcessor
 from .file_processing.profile_dat_processor import ProfileDatProcessor
 from .file_processing.selector_in_processor import SelectorInProcessor
-from .hydrus_profile_pressure_calculator import calculate_pressure_for_hydrus_model
+from .hydrus_profile_pressure_calculator import calculate_pressure_for_hydrus_model, calculate_hydrostatic_pressure
 from ..local_fs_configuration import local_paths
 from ..local_fs_configuration.feedback_loop_file_management import find_previous_simulation_step_dir
 from ..unit_manager import LengthUnit
@@ -38,10 +38,17 @@ def prepare_model_for_next_iteration(project_id: str, ref_hydrus_id: str, compou
 
 def update_bottom_pressure(project_id: str,
                            hydrus_id: str,
-                           btm_pressure_val: float) -> None:
+                           hydrus_profile_depth: float,
+                           water_avg_depth: float,
+                           hydrus_unit: LengthUnit) -> None:
     model_dir = local_paths.get_hydrus_model_path(project_id, hydrus_id, simulation_mode=True)
+
+    water_depth_in_profile = hydrus_profile_depth - water_avg_depth  # FIXME: Sign correction?
+    if not find_previous_simulation_step_dir(project_id):
+        new_pressure_in_profile = calculate_hydrostatic_pressure(model_dir, water_depth_in_profile, hydrus_unit)
+    else:
+        new_pressure_in_profile = calculate_pressure_for_hydrus_model(model_dir, water_depth_in_profile=water_depth_in_profile)
     profile_dat_path = hydrus_utils.find_hydrus_file_path(model_dir, file_name="profile.dat")
-    new_pressure_in_profile = calculate_pressure_for_hydrus_model(model_dir, btm_pressure=btm_pressure_val)
     with open(profile_dat_path, 'r+', encoding="utf-8") as fp:
         ProfileDatProcessor(fp).swap_pressure(new_pressure_in_profile)
 

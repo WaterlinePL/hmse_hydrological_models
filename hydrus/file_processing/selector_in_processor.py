@@ -61,7 +61,7 @@ class SelectorInProcessor(TextFileProcessor):
         for i, line in enumerate(lines):
             block_match = re.search(r'(?<=BLOCK )[A-G](?=:)', line)
             if block_match:
-                block = block_match[1].strip()
+                block = block_match[0].strip()
                 continue
             if block == "B" and "Model" in line:
                 iModel = lines[i + 1].strip().split()[0].strip()
@@ -78,13 +78,16 @@ class SelectorInProcessor(TextFileProcessor):
         for i, line in enumerate(lines):
             block_match = re.search(r'(?<=BLOCK )[A-G](?=:)', line)
             if block_match:
-                block = block_match[1].strip()
+                block = block_match[0].strip()
                 continue
             if block == "B" and "thr" in line:
                 materials_found = True
                 continue
 
             if materials_found:
+                if block != "B":
+                    return pd.DataFrame(material_properties)
+
                 if re.search(r'\d', line):
                     # material data line
                     m_props = list(map(float, line.strip().split()))

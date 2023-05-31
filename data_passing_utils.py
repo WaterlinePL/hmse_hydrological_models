@@ -128,10 +128,11 @@ def transfer_water_level_to_hydrus(project_id: str,
                                                  from_unit=modflow_metadata.grid_unit,
                                                  to_unit=hydrus_depth_unit)
 
-    btm_pressure = hydrus_profile_depth - water_avg_depth
     hydrus_model_management.update_bottom_pressure(project_id=project_id,
                                                    hydrus_id=compound_hydrus_id,
-                                                   btm_pressure_val=btm_pressure)
+                                                   hydrus_profile_depth=hydrus_profile_depth,
+                                                   water_avg_depth=water_avg_depth,
+                                                   hydrus_unit=hydrus_depth_unit)
 
 
 def pass_weather_data_to_hydrus(project_id: str,
