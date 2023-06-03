@@ -2,8 +2,7 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from typing import List, Tuple, Callable, Optional
 
-from hmse_simulations.hmse_projects.hmse_hydrological_models.hydrus.file_processing.text_file_processor import \
-    TextFileProcessor
+from .text_file_processor import TextFileProcessor
 
 
 @dataclass

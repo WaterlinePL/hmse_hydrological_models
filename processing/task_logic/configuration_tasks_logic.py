@@ -60,3 +60,8 @@ def create_hydrus_models_for_zones(project_id: str, shapes_to_hydrus: Dict[str, 
 
 def pre_configure_iteration(project_id: str, **kwargs):
     feedback_loop_file_management.pre_configure_iteration(project_id)
+
+
+def cleanup_project_volume(project_id: str, **kwargs):
+    project_dir = local_paths.get_project_dir(project_id)
+    shutil.rmtree(project_dir, ignore_errors=True)
