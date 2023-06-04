@@ -43,9 +43,10 @@ def __create_parser() -> ArgumentParser:
                                 "meters",
                                 "ft"
                             ])
-    arg_parser.add_argument("--shapes_to_hydrus")  # JSON string with dict
+    arg_parser.add_argument("--shapes_to_hydrus")   # JSON string with dict
     arg_parser.add_argument("--hydrus_to_weather")  # JSON string with dict
-    arg_parser.add_argument("--is_feedback_loop", action='store_true')
+    arg_parser.add_argument("--is_feedback_loop", action="store_true")
+    arg_parser.add_argument("--no_feedback_loop", action="store_false", dest="is_feedback_loop")
     arg_parser.add_argument("--spin_up", type=int)
     return arg_parser
 
