@@ -84,8 +84,11 @@ def validate_model(hydrus_archive, validation_dir: os.PathLike):
 
 # Files: PROFILE.DAT, etc.
 def find_hydrus_file_path(hydrus_base_dir: str, file_name: str) -> Optional[str]:
-    file = next(f for f in os.listdir(hydrus_base_dir) if f.lower() == file_name.lower())
-    return os.path.join(hydrus_base_dir, file) if file else None
+    try:
+        return os.path.join(hydrus_base_dir,
+                            next(f for f in os.listdir(hydrus_base_dir) if f.lower() == file_name.lower()))
+    except StopIteration:
+        return None
 
 
 def __fix_hydrus_project(hydrus_base_dir: str):
