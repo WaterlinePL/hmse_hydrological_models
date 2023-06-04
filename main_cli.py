@@ -34,15 +34,7 @@ def __create_parser() -> ArgumentParser:
                             required=True)  # name of function to call as str
     arg_parser.add_argument("--project_id", required=True)
     arg_parser.add_argument("--start_date")  # str
-    arg_parser.add_argument("--modflow_id")
-    arg_parser.add_argument("--modflow_grid_unit",
-                            choices=[
-                                "mm",
-                                "cm",
-                                "m",
-                                "meters",
-                                "ft"
-                            ])
+    arg_parser.add_argument("--modflow_metadata")   # JSON string with dict
     arg_parser.add_argument("--shapes_to_hydrus")   # JSON string with dict
     arg_parser.add_argument("--hydrus_to_weather")  # JSON string with dict
     arg_parser.add_argument("--is_feedback_loop", action="store_true")
@@ -53,21 +45,17 @@ def __create_parser() -> ArgumentParser:
 
 def __parse_cli_kwargs(project_kwargs: Dict):
     # Only needed params filled in
-    project_kwargs["modflow_metadata"] = ModflowMetadata(
-        modflow_id=project_kwargs["modflow_id"],
-        rows=-1,
-        cols=-1,
-        grid_unit=LengthUnit.map_from_alias(project_kwargs["modflow_grid_unit"]) if project_kwargs["modflow_grid_unit"]
-        else None,
-        steps_info=[]
-    )
+    try:
+        project_kwargs["modflow_metadata"] = ModflowMetadata(**(json.loads(project_kwargs["modflow_metadata"])))
+    except:
+        pass
     try:
         project_kwargs["shapes_to_hydrus"] = json.loads(project_kwargs["shapes_to_hydrus"])
-    except Exception:
+    except:
         pass
     try:
         project_kwargs["hydrus_to_weather"] = json.loads(project_kwargs["hydrus_to_weather"])
-    except Exception:
+    except:
         pass
     return project_kwargs
 

@@ -28,6 +28,9 @@ class ModflowMetadata:
         if should_swap:
             self.steps_info = new_step_info
 
+        if not isinstance(self.grid_unit, LengthUnit):
+            self.grid_unit = LengthUnit.map_from_alias(self.grid_unit)
+
     def to_json(self):
         steps_info = copy.deepcopy(self.steps_info)
         self.steps_info = [info.__dict__ for info in self.steps_info]
