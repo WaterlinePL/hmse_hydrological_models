@@ -1,5 +1,6 @@
 import json
 from argparse import ArgumentParser
+from json import JSONDecodeError
 from typing import Dict
 
 from processing.modflow.modflow_metadata import ModflowMetadata
@@ -44,7 +45,7 @@ def __create_parser() -> ArgumentParser:
                             ])
     arg_parser.add_argument("--shapes_to_hydrus")  # JSON string with dict
     arg_parser.add_argument("--hydrus_to_weather")  # JSON string with dict
-    arg_parser.add_argument("--feedback_mode", action='store_true')
+    arg_parser.add_argument("--is_feedback_loop", action='store_true')
     arg_parser.add_argument("--spin_up", type=int)
     return arg_parser
 
@@ -59,10 +60,14 @@ def __parse_cli_kwargs(project_kwargs: Dict):
         else None,
         steps_info=[]
     )
-    if project_kwargs["shapes_to_hydrus"]:
+    try:
         project_kwargs["shapes_to_hydrus"] = json.loads(project_kwargs["shapes_to_hydrus"])
-    if project_kwargs["hydrus_to_weather"]:
+    except Exception:
+        pass
+    try:
         project_kwargs["hydrus_to_weather"] = json.loads(project_kwargs["hydrus_to_weather"])
+    except Exception:
+        pass
     return project_kwargs
 
 
