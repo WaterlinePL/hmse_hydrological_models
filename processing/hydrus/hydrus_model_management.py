@@ -43,11 +43,13 @@ def update_bottom_pressure(project_id: str,
                            hydrus_unit: LengthUnit) -> None:
     model_dir = local_paths.get_hydrus_model_path(project_id, hydrus_id, simulation_mode=True)
 
-    water_depth_in_profile = hydrus_profile_depth - water_avg_depth  # FIXME: Sign correction?
     if not find_previous_simulation_step_dir(project_id):
-        new_pressure_in_profile = calculate_hydrostatic_pressure(model_dir, water_depth_in_profile, hydrus_unit)
+        new_pressure_in_profile = calculate_hydrostatic_pressure(model_dir, water_avg_depth, hydrus_unit)
     else:
-        new_pressure_in_profile = calculate_pressure_for_hydrus_model(model_dir, water_depth_in_profile=water_depth_in_profile)
+        water_depth_in_profile = hydrus_profile_depth - water_avg_depth  # FIXME: Sign correction?
+        new_pressure_in_profile = calculate_pressure_for_hydrus_model(model_dir,
+                                                                      water_depth_in_profile=water_depth_in_profile)
+
     profile_dat_path = hydrus_utils.find_hydrus_file_path(model_dir, file_name="profile.dat")
     with open(profile_dat_path, 'r+', encoding="utf-8") as fp:
         ProfileDatProcessor(fp).swap_pressure(new_pressure_in_profile)
