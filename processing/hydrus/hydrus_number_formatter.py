@@ -14,7 +14,8 @@ def format_swapped_float(value: float, swapped_sample_format: str) -> Tuple[str,
         base_parts = base.split('e')
         power = int(base_parts[1])
         return f"{base_parts[0]}e{'+' if power >= 0 else '-'}{abs(power):03}", 0
-    elif re.match(r'\d+(\.\d+)?', swapped_sample_format):   # Currently only for SELECTOR.IN
+    # TODO: Need to enhance it for new PROFILE.DAT files
+    elif re.match(r'-?\d+(\.\d+)?', swapped_sample_format):   # Currently only for SELECTOR.IN
         number_parts = swapped_sample_format.split('.')
         after_dot = number_parts[1] if len(number_parts) > 1 else None
         if after_dot is not None:

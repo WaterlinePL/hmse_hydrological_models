@@ -11,10 +11,12 @@ def create_per_shape_hydrus_models(project_id: str, used_hydrus_models: Dict[str
     os.makedirs(hydrus_sim_dir, exist_ok=True)
     for hydrus_id in used_hydrus_models.keys():
         for shape_id in used_hydrus_models[hydrus_id]:
-            base_hydrus_path = local_paths.get_hydrus_model_path(project_id, hydrus_id, simulation_mode=False)
+            ref_hydrus_path = local_paths.get_hydrus_model_path(project_id, hydrus_id,
+                                                                simulation_mode=True,
+                                                                simulation_ref=True)
             new_model_path = local_paths.get_hydrus_model_path(project_id, hydrus_id,
                                                                simulation_mode=True, shape_id=shape_id)
-            shutil.copytree(base_hydrus_path, new_model_path)
+            shutil.copytree(ref_hydrus_path, new_model_path)
 
 
 def pre_configure_iteration(project_id: str) -> None:

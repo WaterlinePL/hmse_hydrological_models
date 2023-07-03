@@ -18,7 +18,7 @@ def calculate_hydrostatic_pressure(hydrus_root_dir: str, water_depth_in_profile:
     above_table_value = unit_manager.convert_units(-1.0,
                                                    from_unit=LengthUnit.m,
                                                    to_unit=hydrus_unit)
-    pressure[pressure < above_table_value] = above_table_value  # FIXME: Units
+    pressure[pressure < above_table_value] = above_table_value
     return pressure.tolist()
 
 
@@ -90,7 +90,7 @@ def calculate_pressure_for_hydrus_model(hydrus_root_dir: str, water_depth_in_pro
             else:
                 my_bracket = [hz, hmax]
                 sol = root_scalar(__flux_bal, args=targs, bracket=my_bracket)
-                # print(sol.root, sol.converged, sol.flag)
+                print(sol.root, sol.converged, sol.flag)
                 h_up = sol.root
         else:
             # upward flux
@@ -99,7 +99,7 @@ def calculate_pressure_for_hydrus_model(hydrus_root_dir: str, water_depth_in_pro
             else:
                 my_bracket = [hmin, hz]
                 sol = root_scalar(__flux_bal, args=targs, bracket=my_bracket)
-                # print(sol.root, sol.converged, sol.flag)
+                print(sol.root, sol.converged, sol.flag)
                 h_up = sol.root
         h2new[idx] = h_up
         h_low = h_up
@@ -201,46 +201,3 @@ def __flux_bal(h, *args):
     kaver = 0.5 * (k0 + my_kh)
     bal = q + kaver * ((h - h0) / dz + 1)
     return bal
-
-
-# From pHydrus but fixed
-def __profile_from_file(fname="PROFILE.DAT", ws=None):
-    """
-    Method to create a profile DataFrame from a profile.dat file
-
-    Parameters
-    ----------
-    fname: str, optional
-        String with the path to the PROFILE.DAT file.
-    ws: str, optional
-        String with the path to the workspace.
-
-    Returns
-    -------
-    data: pandas.DataFrame
-        Pandas DataFrame with the soil profile data.
-
-    Examples
-    --------
-
-    >>> profile = ps.create_profile(h=0.342)
-
-    """
-    fname = path.join(ws, fname)
-    path.exists(fname)
-
-    with open(fname) as file:
-        # Find the starting line to read the profile
-        for start, line in enumerate(file.readlines(1000)):
-            if "Beta" in line:
-                break
-        file.seek(0)  # Go back to start of file
-        # Read the profile data into a Pandas DataFrame
-        data = read_csv(file, skiprows=start, skipfooter=2, index_col=0,
-                        skipinitialspace=True, usecols=range(0, 11),
-                        delim_whitespace=True, engine='python', names=None)
-        data.columns = ["x", "h", "Mat", "Lay", "Beta", "Axz", "Bxz", "Dxz",
-                        "Temp", "Conc"]
-        data.index.name = None
-
-    return data

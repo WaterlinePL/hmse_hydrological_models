@@ -11,6 +11,7 @@ class NodInfOutProcessor(TextFileProcessor):
     def read_node_pressure(self) -> List[float]:
         pressure_data = []
         for line in self.fp.readlines():
+            line = line.replace('\t', ' ')
             if line.strip().startswith("[L]"):
                 pressure_data = []
             elif re.match(r'^\d+ ', line.strip()):

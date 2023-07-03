@@ -21,34 +21,42 @@ def get_project_metadata_path(project_id: str) -> str:
     return os.path.join(WORKSPACE_PATH, project_id, METADATA_FILENAME)
 
 
-def get_modflow_dir(project_id: str, simulation_mode: bool = False) -> str:
-    return os.path.join(get_root_dir(project_id, simulation_mode), 'modflow')
+def get_modflow_dir(project_id: str, simulation_mode: bool = False, simulation_ref: bool = False) -> str:
+    if simulation_ref:
+        assert simulation_mode
+        return os.path.join(get_root_dir(project_id, simulation_mode), "ref", "modflow")
+    return os.path.join(get_root_dir(project_id, simulation_mode), "modflow")
 
 
-def get_hydrus_dir(project_id: str, simulation_mode: bool = False) -> str:
-    return os.path.join(get_root_dir(project_id, simulation_mode), 'hydrus')
+def get_hydrus_dir(project_id: str, simulation_mode: bool = False, simulation_ref: bool = False) -> str:
+    if simulation_ref:
+        assert simulation_mode
+        return os.path.join(get_root_dir(project_id, simulation_mode), "ref", "hydrus")
+    return os.path.join(get_root_dir(project_id, simulation_mode), "hydrus")
 
 
 def get_weather_dir(project_id: str, simulation_mode: bool = False) -> str:
-    return os.path.join(get_root_dir(project_id, simulation_mode), 'weather')
+    return os.path.join(get_root_dir(project_id, simulation_mode), "weather")
 
 
 def get_shapes_dir(project_id: str, simulation_mode: bool = False) -> str:
-    return os.path.join(get_root_dir(project_id, simulation_mode), 'shapes')
+    return os.path.join(get_root_dir(project_id, simulation_mode), "shapes")
 
 
 def get_rch_shapes_dir(project_id: str, simulation_mode: bool = False) -> str:
-    return os.path.join(get_root_dir(project_id, simulation_mode), 'rch_shapes')
+    return os.path.join(get_root_dir(project_id, simulation_mode), "rch_shapes")
 
 
-def get_modflow_model_path(project_id: str, modflow_id: str, simulation_mode: bool = False) -> str:
-    return os.path.join(get_modflow_dir(project_id, simulation_mode), modflow_id)
+def get_modflow_model_path(project_id: str, modflow_id: str,
+                           simulation_mode: bool = False, simulation_ref: bool = False) -> str:
+    return os.path.join(get_modflow_dir(project_id, simulation_mode, simulation_ref), modflow_id)
 
 
-def get_hydrus_model_path(project_id: str, hydrus_id: str, simulation_mode: bool = False,
+def get_hydrus_model_path(project_id: str, hydrus_id: str,
+                          simulation_mode: bool = False, simulation_ref: bool = False,
                           shape_id: Optional[str] = None) -> str:
     true_hydrus_id = get_feedback_loop_hydrus_name(hydrus_id, shape_id) if shape_id else hydrus_id
-    return os.path.join(get_hydrus_dir(project_id, simulation_mode), true_hydrus_id)
+    return os.path.join(get_hydrus_dir(project_id, simulation_mode, simulation_ref), true_hydrus_id)
 
 
 def get_simulation_per_shape_hydrus_model_path(project_id: str, hydrus_id: str, shape_id: str) -> str:

@@ -31,7 +31,7 @@ class LineByLineProcessor(TextFileProcessor):
         for i, line in enumerate(lines):
             stripped = line.strip()
             if stripped.startswith(total_record_count_line_prefix):
-                total_data_records = int(lines[i + 1].strip().split(' ')[0].strip())
+                total_data_records = int(lines[i + 1].strip().split()[0].strip())
             elif stripped.startswith(data_content_line_prefix):
                 data_start = i + 1
 

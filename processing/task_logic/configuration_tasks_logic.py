@@ -22,6 +22,11 @@ def local_files_initialization(project_id: str, **kwargs):
                     local_paths.get_modflow_dir(project_id, simulation_mode=True))
 
 
+def preserve_reference_hydrus_models(project_id: str, **kwargs):
+    shutil.copytree(local_paths.get_hydrus_dir(project_id, simulation_mode=True),
+                    local_paths.get_hydrus_dir(project_id, simulation_mode=True, simulation_ref=True))
+
+
 def extract_output_to_json(project_id: str, modflow_id: str, **kwargs):
     modflow_dir = local_paths.get_modflow_model_path(project_id, modflow_id, simulation_mode=True)
     nam_file = modflow_utils.scan_for_modflow_file(modflow_dir)

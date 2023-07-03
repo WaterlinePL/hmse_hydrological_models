@@ -10,13 +10,15 @@ from .file_processing.nod_inf_out_processor import NodInfOutProcessor
 from .file_processing.profile_dat_processor import ProfileDatProcessor
 from .file_processing.selector_in_processor import SelectorInProcessor
 from .hydrus_profile_pressure_calculator import calculate_pressure_for_hydrus_model, calculate_hydrostatic_pressure
+from .hydrus_utils import HYDRUS_PROPER_CASING
 from ..local_fs_configuration import local_paths
 from ..local_fs_configuration.feedback_loop_file_management import find_previous_simulation_step_dir
 from ..unit_manager import LengthUnit
 
 
 def prepare_model_for_next_iteration(project_id: str, ref_hydrus_id: str, compound_hydrus_id: str, spin_up: int):
-    ref_hydrus_dir = local_paths.get_hydrus_model_path(project_id, ref_hydrus_id, simulation_mode=False)
+    ref_hydrus_dir = local_paths.get_hydrus_model_path(project_id, ref_hydrus_id,
+                                                       simulation_mode=True, simulation_ref=True)
     prev_sim_step_dir = find_previous_simulation_step_dir(project_id)
 
     prev_hydrus_dir = os.path.join(prev_sim_step_dir, 'hydrus',
@@ -49,7 +51,6 @@ def update_bottom_pressure(project_id: str,
         water_depth_in_profile = hydrus_profile_depth - water_avg_depth  # FIXME: Sign correction?
         new_pressure_in_profile = calculate_pressure_for_hydrus_model(model_dir,
                                                                       water_depth_in_profile=water_depth_in_profile)
-
     profile_dat_path = hydrus_utils.find_hydrus_file_path(model_dir, file_name="profile.dat")
     with open(profile_dat_path, 'r+', encoding="utf-8") as fp:
         ProfileDatProcessor(fp).swap_pressure(new_pressure_in_profile)
@@ -76,8 +77,11 @@ def __create_temporary_model(ref_hydrus_dir: str, prev_hydrus_dir: str, new_hydr
 
     # Initial conditions from previous iteration
     if prev_hydrus_dir:
-        nod_inf_path = hydrus_utils.find_hydrus_file_path(prev_hydrus_dir, file_name="nod_inf.out")
-        with open(nod_inf_path, 'r', encoding='utf-8') as fp:
+        prev_iter_nod_inf_path = hydrus_utils.find_hydrus_file_path(prev_hydrus_dir, file_name="nod_inf.out")
+        new_iter_nod_inf_path = (hydrus_utils.find_hydrus_file_path(new_hydrus_dir, file_name="nod_inf.out")
+                                 or os.path.join(new_hydrus_dir, HYDRUS_PROPER_CASING["nod_inf.out"]))
+        shutil.copy(prev_iter_nod_inf_path, new_iter_nod_inf_path)
+        with open(prev_iter_nod_inf_path, 'r', encoding='utf-8') as fp:
             prev_node_pressure = NodInfOutProcessor(fp).read_node_pressure()
 
         profile_dat_path = hydrus_utils.find_hydrus_file_path(new_hydrus_dir, file_name="profile.dat")
@@ -86,7 +90,7 @@ def __create_temporary_model(ref_hydrus_dir: str, prev_hydrus_dir: str, new_hydr
 
         prev_iter_t_level_out = hydrus_utils.find_hydrus_file_path(prev_hydrus_dir, file_name="t_level.out")
         new_t_level_out = (hydrus_utils.find_hydrus_file_path(new_hydrus_dir, file_name="t_level.out")
-                           or os.path.join(new_hydrus_dir, "T_Level.out"))
+                           or os.path.join(new_hydrus_dir, HYDRUS_PROPER_CASING["t_level.out"]))
         shutil.copy(prev_iter_t_level_out, new_t_level_out)
 
     # Crop packages to match Modflow timestep
