@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 from typing import Dict, Union, List
 
 import flopy
@@ -135,7 +136,8 @@ def transfer_water_level_to_hydrus(project_id: str,
                                                    hydrus_unit=hydrus_depth_unit)
 
 
-def pass_weather_data_to_hydrus(project_id: str,
+def pass_weather_data_to_hydrus(project_id: str, start_date: str, spin_up: int,
+                                modflow_metadata: ModflowMetadata,
                                 hydrus_to_weather_mapping: Dict[str, str]) -> None:
     for hydrus_id, weather_id in hydrus_to_weather_mapping.items():
         hydrus_path = local_paths.get_hydrus_model_path(project_id, hydrus_id, simulation_mode=True)
@@ -144,7 +146,10 @@ def pass_weather_data_to_hydrus(project_id: str,
         with open(selector_in_path, 'r', encoding='utf-8') as fp:
             hydrus_length_unit = SelectorInProcessor(fp).get_model_length()
 
-        raw_data = weather_util.read_weather_csv(local_paths.get_weather_model_path(project_id, weather_id))
+        effective_start_date = datetime.strptime(start_date, "%Y-%m-%d") - timedelta(days=spin_up)
+        raw_data = weather_util.read_weather_csv(local_paths.get_weather_model_path(project_id, weather_id),
+                                                 start_date=effective_start_date,
+                                                 record_count=modflow_metadata.get_duration() + spin_up)  # TODO: analyse steady state duration case
         ready_data = weather_util.adapt_data(raw_data, hydrus_length_unit)
         success = weather_util.add_weather_to_hydrus_model(hydrus_path, ready_data)
         if not success:

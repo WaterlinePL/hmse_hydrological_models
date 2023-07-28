@@ -1,13 +1,14 @@
 import csv
 import logging
 from collections import defaultdict
+from typing import Optional
 
 from .. import julian_calendar_manager
 from ..hydrus import hydrus_utils
 from ..hydrus.file_processing.selector_in_processor import SelectorInProcessor
 
 
-def read_weather_csv(filepath: str):
+def read_weather_csv(filepath: str, parsed_start_date: Optional[str] = None, record_count: Optional[int] = None):
     """
     Reads the data from a SWAT weather data .csv file. Returns the data as a dict.
 
@@ -20,8 +21,19 @@ def read_weather_csv(filepath: str):
     reader = csv.DictReader(file)
     jul_day_iter = -1
 
+    found_start_date = parsed_start_date is None
+    # start_date_parts = parsed_start_date.split('-')
+    # start_date_str = '/'.join((start_date_parts[1], start_date_parts[2], start_date_parts[0]))
+
     for line in reader:
+        data_read = False
         for column, value in line.items():
+            # if column == "Date" and value == start_date_str:
+            if column == "Date" and value == parsed_start_date:
+                found_start_date = True
+
+            if not found_start_date:
+                continue
 
             # a None pops up among the keys for some reason, ignore it
             if column is None:
@@ -36,13 +48,19 @@ def read_weather_csv(filepath: str):
                 value = jul_day_iter
                 jul_day_iter += 1
 
+            data_read = True
             data[column].append(value)
+
+        if data_read and record_count is not None:
+            record_count -= 1
+            if record_count <= 0:
+                break
 
     return data
 
 
 # TODO: enum on the units?
-def adapt_data(data: dict, hydrus_dist_unit: str):
+def adapt_data(data: dict, hydrus_dist_unit: str, start_date=None):
     """
     Adapts the raw weather file data for use with hydrus - changes wind speed from m/s to km/day,
     humidity from fractions to percentages (0-100) and scales daily rainfall to the appropriate unit

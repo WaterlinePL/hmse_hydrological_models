@@ -5,7 +5,9 @@ from ..hydrus import hydrus_utils
 from ..modflow.modflow_metadata import ModflowMetadata
 
 
-def weather_data_transfer_to_hydrus(project_id: str, hydrus_to_weather: Dict[str, str],
+def weather_data_transfer_to_hydrus(project_id: str, start_date: str, spin_up: int,
+                                    modflow_metadata: ModflowMetadata,
+                                    hydrus_to_weather: Dict[str, str],
                                     shapes_to_hydrus: Dict[str, Union[str, float]], **kwargs):
     hydrus_to_weather_mapping = {hydrus_id: hydrus_to_weather[hydrus_id]
                                  for hydrus_id in hydrus_utils.get_used_hydrus_models(shapes_to_hydrus)
@@ -13,7 +15,10 @@ def weather_data_transfer_to_hydrus(project_id: str, hydrus_to_weather: Dict[str
 
     data_passing_utils.pass_weather_data_to_hydrus(
         project_id=project_id,
-        hydrus_to_weather_mapping=hydrus_to_weather_mapping
+        hydrus_to_weather_mapping=hydrus_to_weather_mapping,
+        start_date=start_date,
+        spin_up=spin_up,
+        modflow_metadata=modflow_metadata
     )
 
 
