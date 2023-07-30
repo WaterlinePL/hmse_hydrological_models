@@ -51,6 +51,8 @@ class LineByLineProcessor(TextFileProcessor):
         last_data_time_step = None
         use_rewrite = False
 
+        lines_to_write = []
+
         for i, line in enumerate(lines):
             # Truncate only data section of a file
             if i < data_start or new_data_start <= i < new_data_end or i >= data_end:
@@ -65,8 +67,9 @@ class LineByLineProcessor(TextFileProcessor):
                     if first_data_time_step is None:
                         first_data_time_step = cur_time_step
                     last_data_time_step = cur_time_step
-                self.fp.write(to_write)
+                lines_to_write.append(to_write)
 
         self.fp.truncate()
+        self.fp.writelines(lines_to_write)
         self._reset()
         return first_data_time_step, last_data_time_step

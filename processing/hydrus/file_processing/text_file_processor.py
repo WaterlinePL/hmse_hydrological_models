@@ -18,19 +18,9 @@ class TextFileProcessor(ABC):
 
     @staticmethod
     def _substitute_in_line(line: str, value: float, col_idx: int) -> str:
-        # current_value, value_start_idx = TextFileProcessor._read_value_from_col(line, col_idx)
         cols = TextFileProcessor._split_into_columns(line)
-        current_value = cols[col_idx]
-        formatted_new_val, offset = hydrus_number_formatter.format_swapped_float(value, current_value)
+        formatted_new_val = hydrus_number_formatter.format_swapped_float(value)
         cols[col_idx] = formatted_new_val
-        # TODO: move it to swapping format
-        # if np.sign(float(current_value)) == np.sign(value):
-        #     copy_prefix_len = value_start_idx + offset
-        # else:
-        #     copy_prefix_len = value_start_idx - 1 + offset
-        #     if not formatted_new_val.startswith('-'):
-        #         formatted_new_val = f"  {formatted_new_val}"
-        # return line[:copy_prefix_len] + formatted_new_val + line[value_start_idx + len(current_value):]
         return '\t'.join(cols) + '\n'
 
     @staticmethod
