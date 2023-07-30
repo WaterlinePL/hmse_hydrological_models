@@ -1,6 +1,7 @@
 import csv
 import logging
 from collections import defaultdict
+from datetime import datetime
 from typing import Optional
 
 from .. import julian_calendar_manager
@@ -8,7 +9,7 @@ from ..hydrus import hydrus_utils
 from ..hydrus.file_processing.selector_in_processor import SelectorInProcessor
 
 
-def read_weather_csv(filepath: str, parsed_start_date: Optional[str] = None, record_count: Optional[int] = None):
+def read_weather_csv(filepath: str, start_date: Optional[datetime] = None, record_count: Optional[int] = None):
     """
     Reads the data from a SWAT weather data .csv file. Returns the data as a dict.
 
@@ -21,7 +22,7 @@ def read_weather_csv(filepath: str, parsed_start_date: Optional[str] = None, rec
     reader = csv.DictReader(file)
     jul_day_iter = -1
 
-    found_start_date = parsed_start_date is None
+    found_start_date = start_date is None
     # start_date_parts = parsed_start_date.split('-')
     # start_date_str = '/'.join((start_date_parts[1], start_date_parts[2], start_date_parts[0]))
 
@@ -29,8 +30,11 @@ def read_weather_csv(filepath: str, parsed_start_date: Optional[str] = None, rec
         data_read = False
         for column, value in line.items():
             # if column == "Date" and value == start_date_str:
-            if column == "Date" and value == parsed_start_date:
-                found_start_date = True
+            if column == "Date":
+                date_parts = list(map(int, value.split('/')))
+                dt_date = datetime(month=date_parts[0], day=date_parts[1], year=date_parts[2])
+                if dt_date == start_date:
+                    found_start_date = True
 
             if not found_start_date:
                 continue
@@ -167,20 +171,8 @@ def __modify_meteo_file(meteo_file_path, data):
             i += 1
             break
 
-    # verify if weather file length is at least the same as data;
-    # i+1 for 0-indexing, +1 for the sum to be correct, then -1 for the EOF line
-    data_lines = len(old_file_lines) - (i + 1)
-    if len(data[LATITUDE]) < data_lines:
-        logging.log(logging.WARN,
-                    f"Insufficient weather file size"
-                    f" - expected at least {data_lines} records,"
-                    f" got {len(data[LATITUDE])}")
-        return False
-
     # write new table values, only change columns for which we have data
-    data_row = 0
-    while True:
-
+    for data_row in range(len(data[DATE])):
         # break if reached end of file
         curr_line = old_file_lines[i]
         if "end" in curr_line:
@@ -233,19 +225,8 @@ def __modify_atmosph_file(atmosph_file_path, data):
         if "Prec" in curr_line:
             break
 
-    # verify if weather file length is at least the same as data;
-    # i+1 for 0-indexing, +1 for the sum to be correct, then -1 for the EOF line
-    data_lines = len(old_file_lines) - (i + 1)
-    if len(data[LATITUDE]) < data_lines:
-        logging.log(logging.WARN,
-                    f"Insufficient weather file size"
-                    f" - expected at least {data_lines} records,"
-                    f" got {len(data[LATITUDE])}")
-        return False
-
     # modify table
-    data_row = 0
-    while True:
+    for data_row in range(len(data[DATE])):
 
         # break if reached end of file
         curr_line = old_file_lines[i]
