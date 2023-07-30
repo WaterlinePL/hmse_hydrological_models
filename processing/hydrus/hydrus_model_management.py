@@ -58,16 +58,27 @@ def update_bottom_pressure(project_id: str,
 
 def get_profile_depth(project_id: str, hydrus_id: str) -> Tuple[float, LengthUnit]:
     model_dir = local_paths.get_hydrus_model_path(project_id, hydrus_id, simulation_mode=True)
-    hydrus_info_file_path = hydrus_utils.find_hydrus_file_path(model_dir, file_name="hydrus1d.dat")
-    with open(hydrus_info_file_path, 'r', encoding='utf-8') as fp:
-        unit = None
-        depth = None
-        for line in fp.readlines():
-            if line.startswith("SpaceUnit"):
-                unit = line.split('=')[1].strip()
-            elif line.startswith("ProfileDepth"):
-                depth = float(line.split('=')[1])
-        return depth, LengthUnit(unit)
+    # hydrus_info_file_path = hydrus_utils.find_hydrus_file_path(model_dir, file_name="hydrus1d.dat")
+    # with open(hydrus_info_file_path, 'r', encoding='utf-8') as fp:
+    #     unit = None
+    #     depth = None
+    #     for line in fp.readlines():
+    #         if line.startswith("SpaceUnit"):
+    #             unit = line.split('=')[1].strip()
+    #         elif line.startswith("ProfileDepth"):
+    #             depth = float(line.split('=')[1])
+    #     return depth, LengthUnit(unit)
+    profile_file_path = hydrus_utils.find_hydrus_file_path(model_dir, file_name="profile.dat")
+    with open(profile_file_path, 'r', encoding='utf-8') as fp:
+        profile_dat_processor = ProfileDatProcessor(fp)
+        profile_depth = profile_dat_processor.read_profile_depth()
+
+    selector_file_path = hydrus_utils.find_hydrus_file_path(model_dir, file_name="selector.in")
+    with open(selector_file_path, 'r', encoding='utf-8') as fp:
+        selector_in_processor = SelectorInProcessor(fp)
+        depth_unit = selector_in_processor.get_model_length()
+
+    return profile_depth, depth_unit
 
 
 def __create_temporary_model(ref_hydrus_dir: str, prev_hydrus_dir: str, new_hydrus_dir: str,

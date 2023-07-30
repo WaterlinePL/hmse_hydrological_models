@@ -5,8 +5,26 @@ from typing import List, Union
 from .text_file_processor import TextFileProcessor
 
 
+class UnknownProfileDatFormat(RuntimeError):
+    pass
+
+
 @dataclass
 class ProfileDatProcessor(TextFileProcessor):
+
+    def read_profile_depth(self) -> float:
+        self._reset()
+        lines = self.fp.readlines()
+        for i, l in enumerate(lines):
+            match = re.match(r'\s*(\d+)\s*', l)
+            if match:
+                node_count = int(match[1])
+                first_node_line = lines[i + 1]
+                last_node_line = lines[i + node_count]
+                first_node_coord = float(first_node_line.split()[1])
+                last_node_coord = float(last_node_line.split()[1])
+                return first_node_coord - last_node_coord
+        raise UnknownProfileDatFormat("Could not read the profile depth from Profile.dat file!")
 
     def swap_pressure(self, pressure: Union[List[float], float]):
         """
