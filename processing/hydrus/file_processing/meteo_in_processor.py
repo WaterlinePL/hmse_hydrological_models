@@ -12,5 +12,4 @@ class MeteoInProcessor(LineByLineProcessor):
         return self._perform_truncating(data_content_line_prefix="[T]",
                                         total_record_count_line_prefix="MeteoRecords",
                                         data_start_idx=data_start_idx,
-                                        data_count=data_count,
-                                        rewrite_func=TextFileProcessor._rewrite_line_to_julian)
+                                        data_count=data_count)

@@ -31,7 +31,7 @@ def calculate_pressure_for_hydrus_model(hydrus_root_dir: str, water_depth_in_pro
                                            ws="")
     nod_inf2 = ph.read_nod_inf(hydrus_utils.find_hydrus_file_path(hydrus_root_dir, file_name="nod_inf.out"))
     perlen = max(nod_inf2.keys())
-    if perlen == 0:
+    if not (isinstance(perlen, float) or isinstance(perlen, int)):
         raise RuntimeError(f"Model {hydrus_root_dir} contains only initial profile nodes data in NOD_INF.OUT file!")
 
     selector_in_path = hydrus_utils.find_hydrus_file_path(hydrus_root_dir, file_name="selector.in")

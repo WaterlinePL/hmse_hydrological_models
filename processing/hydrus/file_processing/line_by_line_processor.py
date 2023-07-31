@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import List, Tuple, Callable, Optional
 
 from .text_file_processor import TextFileProcessor
+from ... import julian_calendar_manager
 
 
 @dataclass
@@ -13,13 +14,11 @@ class LineByLineProcessor(TextFileProcessor):
         ...
 
     def _perform_truncating(self, data_content_line_prefix: str, total_record_count_line_prefix: str,
-                            data_start_idx: int, data_count: int,
-                            rewrite_func: Optional[Callable[[str], str]] = None) -> Tuple[float, float]:
+                            data_start_idx: int, data_count: int) -> Tuple[float, float]:
         lines, data_start, total_data_records = self._preparse_lines(data_content_line_prefix,
                                                                      total_record_count_line_prefix)
 
-        return self._save_sliced_data(lines, data_start, total_data_records, data_start_idx, data_count,
-                                      rewrite_func)
+        return self._save_sliced_data(lines, data_start, total_data_records, data_start_idx, data_count)
 
     def _preparse_lines(self, data_content_line_prefix: str,
                         total_record_count_line_prefix: str) -> Tuple[List[str], int, int]:
@@ -39,8 +38,7 @@ class LineByLineProcessor(TextFileProcessor):
         return lines, data_start, total_data_records
 
     def _save_sliced_data(self, lines: List[str], data_start: int, total_data_records: int,
-                          record_start_idx: int, record_count: int,
-                          rewrite_func: Optional[Callable[[str], str]]) -> Tuple[float, float]:
+                          record_start_idx: int, record_count: int) -> Tuple[float, float]:
 
         new_data_start = data_start + record_start_idx
         new_data_end = new_data_start + record_count
@@ -49,9 +47,9 @@ class LineByLineProcessor(TextFileProcessor):
         first_original_data_time_step = None
         first_data_time_step = None
         last_data_time_step = None
-        use_rewrite = False
 
         lines_to_write = []
+        julian_iter = -1
 
         for i, line in enumerate(lines):
             # Truncate only data section of a file
@@ -60,9 +58,10 @@ class LineByLineProcessor(TextFileProcessor):
                 if new_data_start <= i < new_data_end:
                     if first_original_data_time_step is None:
                         first_original_data_time_step = float(line.split()[0])
-                        use_rewrite = first_original_data_time_step > 365
-                    if rewrite_func and use_rewrite:
-                        to_write = rewrite_func(line)
+                        julian_iter = julian_calendar_manager.float_to_julian(first_original_data_time_step)
+                    if julian_iter >= 0:
+                        to_write = TextFileProcessor._substitute_in_line(line, julian_iter, col_idx=0)
+                        julian_iter += 1
                     cur_time_step = float(to_write.split()[0])
                     if first_data_time_step is None:
                         first_data_time_step = cur_time_step

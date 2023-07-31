@@ -40,7 +40,7 @@ class SelectorInProcessor(TextFileProcessor):
             elif line.strip().startswith("TPrint(1)"):
                 line_with_print_node_information_config = lines[i + 1]
                 new_line = TextFileProcessor._substitute_in_line(line_with_print_node_information_config,
-                                                                 last_day, col_idx=0)
+                                                                 last_day - 0.01, col_idx=0)
                 end = re.search(r'\d+(\.\d+)?', new_line).end()
                 padding = ' ' * (len(new_line) - end - 1)
                 to_write = new_line[:end] + padding + '\n'
@@ -65,7 +65,7 @@ class SelectorInProcessor(TextFileProcessor):
                 continue
             if block == "B" and "Model" in line:
                 iModel = lines[i + 1].strip().split()[0].strip()
-                return {"iModel": iModel}
+                return {"iModel": int(iModel)}
         raise RuntimeError(f"Invalid data, water iModel specified in ({self.fp.name})")
 
     def read_material_properties(self) -> pd.DataFrame:
