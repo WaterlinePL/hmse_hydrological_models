@@ -5,6 +5,7 @@ from typing import Dict
 import pandas as pd
 
 from .text_file_processor import TextFileProcessor
+from ..hydrus_number_formatter import FloatFormat
 from ...unit_manager import LengthUnit
 
 
@@ -28,7 +29,8 @@ class SelectorInProcessor(TextFileProcessor):
             write_idx = i
             if line.strip().endswith("MPL"):
                 line_with_node_information = lines[i + 1]
-                to_write = TextFileProcessor._substitute_in_line(line_with_node_information, 1, col_idx=7)
+                to_write = TextFileProcessor._substitute_in_line(line_with_node_information, 1, col_idx=7,
+                                                                 float_format=FloatFormat.INTEGER)
                 write_idx = i + 1
             elif line.strip().startswith("tInit"):
                 line_with_step_data = lines[i + 1]
@@ -39,11 +41,8 @@ class SelectorInProcessor(TextFileProcessor):
                 write_idx = i + 1
             elif line.strip().startswith("TPrint(1)"):
                 line_with_print_node_information_config = lines[i + 1]
-                new_line = TextFileProcessor._substitute_in_line(line_with_print_node_information_config,
+                to_write = TextFileProcessor._substitute_in_line(line_with_print_node_information_config,
                                                                  last_day - 0.01, col_idx=0)
-                end = re.search(r'\d+(\.\d+)?', new_line).end()
-                padding = ' ' * (len(new_line) - end - 1)
-                to_write = new_line[:end] + padding + '\n'
                 write_idx = i + 1
             if to_write[-1] != '\n':
                 to_write = to_write + '\n'
@@ -95,4 +94,3 @@ class SelectorInProcessor(TextFileProcessor):
                 else:
                     return pd.DataFrame(material_properties)
         raise RuntimeError(f"Invalid data, water iModel specified in ({self.fp.name})")
-

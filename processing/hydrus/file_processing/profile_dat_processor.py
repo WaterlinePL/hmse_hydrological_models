@@ -70,7 +70,8 @@ class ProfileDatProcessor(TextFileProcessor):
                     lines[i] = new_line
                     break
                 elif not swap_only_at_bottom:
-                    new_line = TextFileProcessor._substitute_in_line(line, pressure[profile_info_counter], col_idx=2)
+                    new_line = TextFileProcessor._substitute_in_line(line, pressure[profile_info_counter],
+                                                                     col_idx=2)
                     lines[i] = new_line
                 profile_info_counter += 1
 

@@ -6,20 +6,22 @@ import numpy as np
 from typing.io import TextIO
 
 from .. import hydrus_number_formatter
+from ..hydrus_number_formatter import FloatFormat
 from ... import julian_calendar_manager
 
 
 @dataclass
 class TextFileProcessor(ABC):
-    fp: TextIO  # Should be opened and closed outside of the class, should be read-write
+    fp: TextIO  # Should be opened and closed outside the class, should be read-write
 
     def _reset(self):
         self.fp.seek(0)
 
     @staticmethod
-    def _substitute_in_line(line: str, value: float, col_idx: int) -> str:
+    def _substitute_in_line(line: str, value: float, col_idx: int,
+                            float_format: FloatFormat = FloatFormat.THREE_DIGITS_AFTER_DOT) -> str:
         cols = TextFileProcessor._split_into_columns(line)
-        formatted_new_val = hydrus_number_formatter.format_swapped_float(value)
+        formatted_new_val = hydrus_number_formatter.format_swapped_float(value, val_format=float_format)
         cols[col_idx] = formatted_new_val
         return '\t'.join(cols) + '\n'
 
