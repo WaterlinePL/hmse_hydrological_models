@@ -71,8 +71,10 @@ def __create_temporary_model(ref_modflow_dir: str, prev_modflow_dir: Optional[st
 
     # Initial conditions from previous iteration
     if prev_modflow_dir is not None:
-        prev_model_fhd_path = os.path.join(prev_modflow_dir, modflow_utils.scan_for_modflow_file(prev_modflow_dir,
-                                                                                                 ext=".fhd"))
+        fhd_filename = modflow_utils.scan_for_modflow_file(prev_modflow_dir, ext=".fhd")
+        prev_model_fhd_path = os.path.join(prev_modflow_dir, fhd_filename)
+        shutil.copy(prev_model_fhd_path, os.path.join(new_modflow_dir, fhd_filename))
+
         prev_model_fhd = FormattedHeadFile(prev_model_fhd_path)
         bas_package = next(pkg for pkg in dst_model.packagelist if isinstance(pkg, ModflowBas))
         bas_package.strt = prev_model_fhd.get_data()
