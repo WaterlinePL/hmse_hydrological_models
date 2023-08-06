@@ -10,7 +10,8 @@ from processing.task_logic.data_tasks_logic import \
     transfer_data_from_modflow_to_hydrus_init_transient
 from processing.unit_manager import LengthUnit
 from processing.task_logic.configuration_tasks_logic import local_files_initialization, extract_output_to_json, \
-    initialize_feedback_iteration, create_hydrus_models_for_zones, pre_configure_iteration, cleanup_project_volume
+    initialize_feedback_iteration, create_hydrus_models_for_zones, pre_configure_iteration, cleanup_project_volume, \
+    preserve_reference_hydrus_models
 
 
 def __create_parser() -> ArgumentParser:
@@ -22,6 +23,7 @@ def __create_parser() -> ArgumentParser:
                                 "local_files_initialization",
                                 "extract_output_to_json",
                                 "initialize_feedback_iteration",
+                                "preserve_reference_hydrus_models",
                                 "create_hydrus_models_for_zones",
                                 "pre_configure_iteration",
                                 "cleanup_project_volume",
