@@ -3,7 +3,9 @@ from typing import Dict, Union, List
 
 import flopy
 import numpy as np
+import pandas as pd
 import phydrus as ph
+from flopy.modflow import Modflow
 
 from . import unit_manager
 from .hydrus import hydrus_utils, hydrus_model_management
@@ -53,12 +55,6 @@ def __process_hydrus_shapes(assigned_shape_ids, mapping_val, modflow_metadata: M
     shapes_for_model = [np.load(local_paths.get_shape_path(project_id, shape_id))
                         for shape_id in assigned_shape_ids]
 
-    # if feedback_loop and isinstance(mapping_val, str):
-    #     # prev_step = feedback_loop_file_management.find_previous_simulation_step_dir(project_id)
-    #     # feedback_spin_up = spin_up if prev_step is None else 0
-    #     sum_v_bot = __get_sum_vbot(project_id, mapping_val, modflow_metadata.grid_unit, spin_up)
-    #     __recharge_update(modflow_model, shapes_for_model, sum_v_bot)
-    # else:
     sum_v_bot = __get_sum_vbot(project_id, mapping_val, modflow_metadata.grid_unit, spin_up)
     __recharge_update(modflow_model, shapes_for_model, sum_v_bot)
 
@@ -70,47 +66,61 @@ def __process_hydrus_shapes(assigned_shape_ids, mapping_val, modflow_metadata: M
                              irch=rch_package.irch).write_file(check=False)
 
 
-def __get_sum_vbot(project_id: str, mapping_val: Union[str, float], modflow_unit: LengthUnit, spin_up: int):
+def __get_sum_vbot(project_id: str,
+                   mapping_val: Union[str, float],
+                   modflow_unit: LengthUnit,
+                   spin_up: int) -> Union[pd.DataFrame, float]:
+    hydrus_model_dir = local_paths.get_hydrus_model_path(project_id,
+                                                         hydrus_id=mapping_val,
+                                                         simulation_mode=True)
+
+    selector_path = hydrus_utils.find_hydrus_file_path(hydrus_model_dir, file_name="selector.in")
+    with open(selector_path, 'r', encoding='utf-8') as fp:
+        hydrus_len_unit = SelectorInProcessor(fp).get_model_length()
+
     if isinstance(mapping_val, str):
-        hydrus_model_dir = local_paths.get_hydrus_model_path(project_id,
-                                                             hydrus_id=mapping_val,
-                                                             simulation_mode=True)
         hydrus_recharge_path = hydrus_utils.find_hydrus_file_path(hydrus_model_dir, file_name="t_level.out")
-        selector_path = hydrus_utils.find_hydrus_file_path(hydrus_model_dir, file_name="selector.in")
         sum_v_bot = ph.read.read_tlevel(path=hydrus_recharge_path)['sum(vBot)']
-        with open(selector_path, 'r', encoding='utf-8') as fp:
-            hydrus_len_unit = SelectorInProcessor(fp).get_model_length()
 
         # calc difference for each day (excluding spin_up period)
         if spin_up >= len(sum_v_bot):
             raise DataProcessingException('Spin up is longer than hydrus model time')
 
-        sum_vbot_val = sum_v_bot.iloc[-1]
-        if spin_up > 0:
-            sum_vbot_val -= sum_v_bot.iloc[spin_up - 1]
-        val_in_hydrus_unit = sum_vbot_val / (len(sum_v_bot) - spin_up)  # (-np.diff(sum_v_bot))[spin_up:]
-        val_in_modflow_unit = unit_manager.convert_units(val_in_hydrus_unit,
-                                                         from_unit=hydrus_len_unit,
-                                                         to_unit=modflow_unit)
-        return val_in_modflow_unit
+        sum_v_bot = sum_v_bot.iloc[spin_up:]
+
+        modflow_unit_coef = unit_manager.convert_units(value=1,
+                                                       from_unit=hydrus_len_unit,
+                                                       to_unit=modflow_unit)
+        # Sign opposite to the Hydrus and in modflow units
+        return -sum_v_bot * modflow_unit_coef
     elif isinstance(mapping_val, float):
         return mapping_val
     else:
         raise DataProcessingException("Unknown mapping in simulation!")
 
 
-def __recharge_update(modflow_model, shapes_for_model, avg_sum_v_bot):
+def __recharge_update(modflow_model: Modflow, shapes_for_model: List[np.ndarray], sum_v_bot: pd.Series):
     shape = np.amax(shapes_for_model, axis=0) if len(shapes_for_model) > 1 else shapes_for_model[0]
     mask = (shape == 1)  # Frontend sets explicitly 1
+    stress_period_duration_iter = 0
+
     for idx, stress_period_duration in enumerate(modflow_model.modeltime.perlen):
-        # modflow rch array for given stress period
-        recharge_modflow_array = modflow_model.rch.rech[idx].array
+        if not modflow_model.modeltime.steady_state[idx]:
+            # modflow rch array for given stress period
+            recharge_modflow_array = modflow_model.rch.rech[idx].array
 
-        # add calculated hydrus average sum(vBot) to modflow recharge array
-        recharge_modflow_array[mask] = avg_sum_v_bot
+            # add calculated hydrus average sum(vBot) to modflow recharge array
+            period_duration = int(stress_period_duration)
+            final_sp_recharge = sum_v_bot.values[stress_period_duration_iter + period_duration - 1]     # +/- 1
+            starting_sp_recharge = sum_v_bot.values[stress_period_duration_iter]
+            avg_sum_v_bot = (final_sp_recharge - starting_sp_recharge) / stress_period_duration
+            recharge_modflow_array[mask] = avg_sum_v_bot
 
-        # save calculated recharge to modflow model
-        modflow_model.rch.rech[idx] = recharge_modflow_array
+            # save calculated recharge to modflow model
+            modflow_model.rch.rech[idx] = recharge_modflow_array
+
+            # update stress period duration iterator
+            stress_period_duration_iter += period_duration
 
 
 def transfer_water_level_to_hydrus(project_id: str,
@@ -146,10 +156,10 @@ def pass_weather_data_to_hydrus(project_id: str, start_date: str, spin_up: int,
         with open(selector_in_path, 'r', encoding='utf-8') as fp:
             hydrus_length_unit = SelectorInProcessor(fp).get_model_length()
 
-        effective_start_date = datetime.strptime(start_date, "%Y-%m-%d") - timedelta(days=spin_up)
+        data_start_date = datetime.strptime(start_date, "%Y-%m-%d") - timedelta(days=spin_up) if start_date else None
         raw_data = weather_util.read_weather_csv(local_paths.get_weather_model_path(project_id, weather_id),
-                                                 start_date=effective_start_date,
-                                                 record_count=modflow_metadata.get_duration() + spin_up)  # TODO: analyse steady state duration case
+                                                 start_date=data_start_date,
+                                                 record_count=1 + modflow_metadata.get_duration() + spin_up)
         ready_data = weather_util.adapt_data(raw_data, hydrus_length_unit)
         success = weather_util.add_weather_to_hydrus_model(hydrus_path, ready_data)
         if not success:
