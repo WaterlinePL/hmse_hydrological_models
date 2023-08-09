@@ -132,19 +132,17 @@ def __get_hydrus_time_range(project_metadata: Dict, step: int, spin_up: int) -> 
     steps_info = project_metadata["modflow_metadata"]["steps_info"]
     first_step = 0
     step_count = 0
-    i = -1
 
-    for info in steps_info:
-        i += 1
+    for i, info in enumerate(steps_info):
         if i == step:
-            step_count = info["duration"]
+            step_count = info["duration"] if info["type"] != "STEADY_STATE" else 0
             break
         else:
-            first_step += info["duration"]
+            first_step += info["duration"] if info["type"] != "STEADY_STATE" else 0
 
     if step == 0:
         step_count += spin_up
     else:
         first_step += spin_up
 
-    return first_step, step_count
+    return first_step, step_count + 1

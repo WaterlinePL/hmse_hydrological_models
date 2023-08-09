@@ -111,7 +111,7 @@ def __recharge_update(modflow_model: Modflow, shapes_for_model: List[np.ndarray]
 
             # add calculated hydrus average sum(vBot) to modflow recharge array
             period_duration = int(stress_period_duration)
-            final_sp_recharge = sum_v_bot.values[stress_period_duration_iter + period_duration - 1]     # +/- 1
+            final_sp_recharge = sum_v_bot.values[stress_period_duration_iter + period_duration - 1]
             starting_sp_recharge = sum_v_bot.values[stress_period_duration_iter]
             avg_sum_v_bot = (final_sp_recharge - starting_sp_recharge) / stress_period_duration
             recharge_modflow_array[mask] = avg_sum_v_bot
