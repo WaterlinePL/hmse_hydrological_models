@@ -145,7 +145,7 @@ def get_shapes_from_rch(model_path: os.PathLike, model_shape: Tuple[int, int]) -
                                       value=recharge_array[row][col])
 
     ibound = next(pkg for pkg in modflow_model.packagelist if isinstance(pkg, ModflowBas)).ibound[0].array
-    inactive_cells = (ibound - 1) % 2
+    inactive_cells = np.where(ibound == 0, 1, 0)
     return recharge_masks, inactive_cells
 
 
