@@ -47,18 +47,23 @@ def __create_parser() -> ArgumentParser:
 
 def __parse_cli_kwargs(project_kwargs: Dict):
     # Only needed params filled in
-    try:
-        project_kwargs["modflow_metadata"] = ModflowMetadata(**(json.loads(project_kwargs["modflow_metadata"])))
-    except:
-        pass
-    try:
-        project_kwargs["shapes_to_hydrus"] = json.loads(project_kwargs["shapes_to_hydrus"])
-    except:
-        pass
-    try:
-        project_kwargs["hydrus_to_weather"] = json.loads(project_kwargs["hydrus_to_weather"])
-    except:
-        pass
+    # try:
+    mf_metadata_dict = json.loads(project_kwargs["modflow_metadata"].replace('\'', "\""))
+    mf_metadata_dict = {k: v for k, v in mf_metadata_dict.items() if k in ModflowMetadata.__dict__["__annotations__"]}
+    project_kwargs["modflow_metadata"] = ModflowMetadata(
+        **mf_metadata_dict
+    )
+    project_kwargs["modflow_id"] = project_kwargs["modflow_metadata"].modflow_id
+    # except:
+    #     pass
+    # try:
+    project_kwargs["shapes_to_hydrus"] = json.loads(project_kwargs["shapes_to_hydrus"].replace('\'', "\""))
+    # except:
+    #     pass
+    # try:
+    project_kwargs["hydrus_to_weather"] = json.loads(project_kwargs["hydrus_to_weather"].replace('\'', "\""))
+    # except:
+    #     pass
     return project_kwargs
 
 
