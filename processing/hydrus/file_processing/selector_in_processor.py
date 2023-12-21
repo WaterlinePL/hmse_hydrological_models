@@ -34,8 +34,8 @@ class SelectorInProcessor(TextFileProcessor):
                 write_idx = i + 1
             elif line.strip().startswith("tInit"):
                 line_with_step_data = lines[i + 1]
-                new_t_init = first_day - 0.01
-                new_t_max = last_day - 0.01
+                new_t_init = first_day - 0.1
+                new_t_max = last_day - 0.1
                 new_line = TextFileProcessor._substitute_in_line(line_with_step_data, new_t_init, col_idx=0)
                 to_write = TextFileProcessor._substitute_in_line(new_line, new_t_max, col_idx=1)
                 write_idx = i + 1

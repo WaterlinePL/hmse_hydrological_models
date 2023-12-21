@@ -9,19 +9,19 @@ from ..model_exceptions import HydrusMissingFileError
 
 EXPECTED_INPUT_FILES = ["SELECTOR.IN", "ATMOSPH.IN"]
 HYDRUS_PROPER_CASING = {
-    "meteo.in": "Meteo.in",
+    "meteo.in": "METEO.IN",
     "atmosph.in": "ATMOSPH.IN",
     "selector.in": "SELECTOR.IN",
-    "options.in": "Options.in",
-    "hysteresis.in": "Hysteresis.in",
-    "mater.in": "Mater.in",
-    "moistdep.in": "MoistDep.in",
+    "options.in": "OPTIONS.IN",
+    "hysteresis.in": "HYSTERESIS.IN",
+    "mater.in": "MATER.IN",
+    "moistdep.in": "MOISTDEP.IN",
 
     "profile.dat": "PROFILE.DAT",
 
-    "solutex.out": "solutex.out",
+    "solutex.out": "SOLUTEX.OUT",
     "nod_inf_v.out": "NOD_INF_V.OUT",
-    "t_level1.out": "T_Level1.OUT",
+    "t_level1.out": "T_LEVEL1.OUT",
     "profile.out": "PROFILE.OUT",
     "obs_node.out": "OBS_NODE.OUT",
     "balance.out": "BALANCE.OUT",
@@ -29,7 +29,7 @@ HYDRUS_PROPER_CASING = {
     "t_level.out": "T_LEVEL.OUT",
     "run_inf.out": "RUN_INF.OUT",
     "i_check.out": "I_CHECK.OUT",
-    "meteo.out": "Meteo.out",
+    "meteo.out": "METEO.OUT",
     "a_level.out": "A_LEVEL.OUT"
 }
 
